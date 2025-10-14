@@ -37,6 +37,36 @@ required_protocols:
       enforcement: "MANDATORY - Ensure documentation agent follows template"
       applies_to: "Documentation coordination"
 
+    - name: "Parallel Migration Protocol"
+      file: "docs/agents/PARALLEL-MIGRATION-PROTOCOL.md"
+      enforcement: "MANDATORY - Spawn agents in parallel for independent work"
+      applies_to: "Multi-project stages (Operations, Enrichers, Samples)"
+
+    - name: "Continuous Testing Protocol"
+      file: "docs/agents/CONTINUOUS-TESTING-PROTOCOL.md"
+      enforcement: "MANDATORY - Test after EVERY stage, fix-before-proceed rule"
+      applies_to: "All stage transitions"
+
+    - name: "Incremental Documentation Protocol"
+      file: "docs/agents/INCREMENTAL-DOCUMENTATION-PROTOCOL.md"
+      enforcement: "MANDATORY - Update docs during migration, not at end"
+      applies_to: "All stages (CHANGELOG.md, MIGRATION-GUIDE.md updates)"
+
+    - name: "Stage Validation Protocol"
+      file: "docs/agents/STAGE-VALIDATION-PROTOCOL.md"
+      enforcement: "RECOMMENDED - Automate quality gate checks"
+      applies_to: "After each stage completion"
+
+    - name: "ADR Lifecycle Protocol"
+      file: "docs/agents/GENERIC-ADR-LIFECYCLE-PROTOCOL.md"
+      enforcement: "MANDATORY - Create ADRs before decisions, follow lifecycle"
+      applies_to: "All architectural decisions"
+
+    - name: "Documentation Protocol"
+      file: "docs/agents/GENERIC-DOCUMENTATION-PROTOCOL.md"
+      enforcement: "MANDATORY - Follow documentation standards"
+      applies_to: "All documentation work"
+
   protocol_enforcement:
     logging:
       - "After each stage completion, log via append-to-history.sh"

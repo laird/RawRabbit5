@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using RawRabbit.AspNet.Sample.Controllers;
 using RawRabbit.Configuration;
@@ -23,17 +24,13 @@ namespace RawRabbit.AspNet.Sample
 	{
 		private readonly string _rootPath;
 
-		public Startup(IHostingEnvironment env)
+		public Startup(IWebHostEnvironment env, IConfiguration configuration)
 		{
 			_rootPath = env.ContentRootPath;
-			var builder = new ConfigurationBuilder()
-				.SetBasePath(_rootPath)
-				.AddJsonFile("appsettings.json")
-				.AddEnvironmentVariables();
-			Configuration = builder.Build();
+			Configuration = configuration;
 		}
 
-		public IConfigurationRoot Configuration { get; }
+		public IConfiguration Configuration { get; }
 
 		public void ConfigureServices(IServiceCollection services)
 		{
@@ -49,28 +46,35 @@ namespace RawRabbit.AspNet.Sample
 							{
 								return new MessageContext
 								{
-									Source = c.GetHttpContext().Request.GetDisplayUrl()
+									Source = c.GetHttpContext()?.Request.GetDisplayUrl() ?? string.Empty
 								};
 							})
 					})
-				.AddMvc();
+				.AddControllers();
 		}
 
-		public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
+		public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
 		{
 			Log.Logger = GetConfiguredSerilogger();
-			loggerFactory
-				.AddSerilog()
-				.AddConsole(Configuration.GetSection("Logging"));
+			app.UseSerilogRequestLogging();
 
-			app.UseMvc();
+			if (env.IsDevelopment())
+			{
+				app.UseDeveloperExceptionPage();
+			}
+
+			app.UseRouting();
+			app.UseEndpoints(endpoints =>
+			{
+				endpoints.MapControllers();
+			});
 		}
 
 		private ILogger GetConfiguredSerilogger()
 		{
 			return new LoggerConfiguration()
 				.WriteTo.File($"{_rootPath}/Logs/serilog.log", LogEventLevel.Debug)
-				.WriteTo.LiterateConsole()
+				.WriteTo.Console()
 				.CreateLogger();
 		}
 
@@ -81,7 +85,7 @@ namespace RawRabbit.AspNet.Sample
 			{
 				throw new ArgumentException($"Unable to configuration section 'RawRabbit'. Make sure it exists in the provided configuration");
 			}
-			return section.Get<RawRabbitConfiguration>();
+			return section.Get<RawRabbitConfiguration>() ?? throw new InvalidOperationException("Failed to bind RawRabbitConfiguration");
 		}
 	}
 }

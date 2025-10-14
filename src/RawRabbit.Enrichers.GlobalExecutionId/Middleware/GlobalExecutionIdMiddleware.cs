@@ -5,32 +5,24 @@ using RawRabbit.Logging;
 using RawRabbit.Pipe;
 using RawRabbit.Pipe.Middleware;
 
-#if NET451
-using System.Runtime.Remoting.Messaging;
-#endif
-
 namespace RawRabbit.Enrichers.GlobalExecutionId.Middleware
 {
 	public class GlobalExecutionOptions
 	{
-		public Func<IPipeContext, string> IdFunc { get; set; }
-		public Action<IPipeContext, string> PersistAction { get; set; }
+		public Func<IPipeContext, string?>? IdFunc { get; set; }
+		public Action<IPipeContext, string>? PersistAction { get; set; }
 	}
 
 	public class GlobalExecutionIdMiddleware : StagedMiddleware
 	{
 		public override string StageMarker => Pipe.StageMarker.Initialized;
-		protected Func<IPipeContext, string> IdFunc;
+		protected Func<IPipeContext, string?> IdFunc;
 		protected Action<IPipeContext, string> PersistAction;
 
-#if NETSTANDARD1_5
-		protected static readonly AsyncLocal<string> ExecutionId = new AsyncLocal<string>();
-#elif NET451
-		protected const string GlobalExecutionId = "RawRabbit:GlobalExecutionId";
-#endif
+		protected static readonly AsyncLocal<string?> ExecutionId = new AsyncLocal<string?>();
 		private readonly ILog _logger = LogProvider.For<GlobalExecutionIdMiddleware>();
 
-		public GlobalExecutionIdMiddleware(GlobalExecutionOptions options = null)
+		public GlobalExecutionIdMiddleware(GlobalExecutionOptions? options = null)
 		{
 			IdFunc = options?.IdFunc ?? (context => context.GetGlobalExecutionId());
 			PersistAction = options?.PersistAction ?? ((context, id) => context.Properties.TryAdd(PipeKey.GlobalExecutionId, id));
@@ -64,18 +56,13 @@ namespace RawRabbit.Enrichers.GlobalExecutionId.Middleware
 			return executionId;
 		}
 
-		protected virtual string GetExecutionIdFromProcess()
+		protected virtual string? GetExecutionIdFromProcess()
 		{
-			string executionId = null;
-#if NETSTANDARD1_5
-			executionId = ExecutionId?.Value;
-#elif NET451
-			executionId = CallContext.LogicalGetData(GlobalExecutionId) as string;
-#endif
+			string? executionId = ExecutionId?.Value;
 			return executionId;
 		}
 
-		protected virtual string GetExecutionIdFromContext(IPipeContext context)
+		protected virtual string? GetExecutionIdFromContext(IPipeContext context)
 		{
 			var id = IdFunc(context);
 			if (!string.IsNullOrWhiteSpace(id))
@@ -87,11 +74,7 @@ namespace RawRabbit.Enrichers.GlobalExecutionId.Middleware
 
 		protected virtual void SaveIdInProcess(string executionId)
 		{
-#if NETSTANDARD1_5
 			ExecutionId.Value = executionId;
-#elif NET451
-			CallContext.LogicalSetData(GlobalExecutionId, executionId);
-#endif
 		}
 	}
 }

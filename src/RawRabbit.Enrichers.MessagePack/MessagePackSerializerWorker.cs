@@ -1,7 +1,6 @@
 ﻿using System;
-using System.Linq;
-using System.Reflection;
 using MessagePack;
+using MessagePack.Resolvers;
 using RawRabbit.Serialization;
 
 namespace RawRabbit.Enrichers.MessagePack
@@ -9,44 +8,35 @@ namespace RawRabbit.Enrichers.MessagePack
 	internal class MessagePackSerializerWorker : ISerializer
 	{
 		public string ContentType => "application/x-messagepack";
-		private readonly MethodInfo _deserializeType;
-		private readonly MethodInfo _serializeType;
+		private readonly MessagePackSerializerOptions _options;
 
 		public MessagePackSerializerWorker(MessagePackFormat format)
 		{
-			Type tp;
-
-			if (format == MessagePackFormat.LZ4Compression)
-				tp = typeof(LZ4MessagePackSerializer);
-			else
-				tp = typeof(MessagePackSerializer);
-
-			_deserializeType = tp
-				.GetMethod(nameof(MessagePackSerializer.Deserialize), new[] { typeof(byte[]) });
-			_serializeType = tp
-				.GetMethods()
-				.FirstOrDefault(s => s.Name == nameof(MessagePackSerializer.Serialize) && s.ReturnType == typeof(byte[]));
+			// MessagePack v2.x uses MessagePackSerializerOptions instead of separate serializer types
+			_options = format == MessagePackFormat.LZ4Compression
+				? MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.Lz4BlockArray)
+				: MessagePackSerializerOptions.Standard;
 		}
 
 		public byte[] Serialize(object obj)
 		{
 			if (obj == null)
-				throw new ArgumentNullException();
+				throw new ArgumentNullException(nameof(obj));
 
-			return (byte[])_serializeType
-				.MakeGenericMethod(obj.GetType())
-				.Invoke(null, new[] { obj });
+			// MessagePack v2.x uses MessagePackSerializer.Serialize with options
+			return MessagePackSerializer.Typeless.Serialize(obj, _options);
 		}
 
 		public object Deserialize(Type type, byte[] bytes)
 		{
-			return _deserializeType.MakeGenericMethod(type)
-				.Invoke(null, new object[] { bytes });
+			// MessagePack v2.x uses MessagePackSerializer.Deserialize with type parameter
+			return MessagePackSerializer.Deserialize(type, bytes, _options)
+				?? throw new InvalidOperationException($"Failed to deserialize object of type {type}");
 		}
 
 		public TType Deserialize<TType>(byte[] bytes)
 		{
-			return MessagePackSerializer.Deserialize<TType>(bytes);
+			return MessagePackSerializer.Deserialize<TType>(bytes, _options);
 		}
 	}
 }

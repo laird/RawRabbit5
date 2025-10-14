@@ -30,6 +30,21 @@ required_protocols:
       applies_to: "After documentation creation"
       template: "Use Template 7: Documentation Creation"
 
+    - name: "Documentation Protocol"
+      file: "docs/agents/GENERIC-DOCUMENTATION-PROTOCOL.md"
+      enforcement: "MANDATORY - Follow documentation standards (HISTORY.md, CHANGELOG.md, README.md, ADRs)"
+      applies_to: "All documentation work"
+
+    - name: "Incremental Documentation Protocol"
+      file: "docs/agents/INCREMENTAL-DOCUMENTATION-PROTOCOL.md"
+      enforcement: "MANDATORY - Update docs during migration, not at end"
+      applies_to: "All migration documentation (CHANGELOG.md, MIGRATION-GUIDE.md)"
+
+    - name: "ADR Lifecycle Protocol"
+      file: "docs/agents/GENERIC-ADR-LIFECYCLE-PROTOCOL.md"
+      enforcement: "MANDATORY - Follow ADR naming convention and lifecycle"
+      applies_to: "All ADR creation and updates"
+
     - name: "Document Directory Structure"
       enforcement: "MANDATORY - All documents MUST follow defined directory structure"
       applies_to: "All document creation and organization activities"

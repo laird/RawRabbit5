@@ -42,6 +42,7 @@ grep -r "<TargetFramework" . --include="*.csproj" | cut -d'>' -f2 | cut -d'<' -f
 - Target framework distribution
 - Multi-targeting scenarios
 - Build output types (library, console, web, test)
+- Test coverage
 
 **Template**:
 ```markdown
@@ -152,6 +153,11 @@ dotnet test --collect:"XPlat Code Coverage"
 reportgenerator -reports:**/coverage.cobertura.xml -targetdir:./coverage-report
 ```
 
+Key Questions:
+- Is there sufficient test coverage to enable validation of migrated software? A good benchmark is 80% of lines of code covered.
+- Is there test coverage at all relevant levels, unit test and integration test and end-to-end tests, with sufficient coverage?
+- If test coverage is lacking, add a pre-migration phase for adding test coverage to the legacy system. This phase would involve only adding tests, with no changes allowed to the system being tested.
+
 **Document**:
 ```markdown
 ## Test Coverage
@@ -257,6 +263,7 @@ Stage 4: Integration and validation
 
 | Risk | Description | Mitigation |
 |------|-------------|------------|
+| Low Test Coverage | Pre-migration testing is less than 80% of lines of code | Add additional test coverage until target coverage is reached. |
 | **API Breaking Changes** | APIs removed/changed | Create ADR, update code systematically |
 | **Dependency Incompatibility** | Package doesn't support target | Find alternative, fork, or wait |
 | **Performance Regression** | New framework slower | Benchmark, optimize, accept trade-off |

@@ -26,6 +26,8 @@ namespace RawRabbit
 			.Use<StageMarkerMiddleware>(StageMarkerOptions.For(RespondStage.HandlerInvoked))
 			.Use<ExplicitAckMiddleware>()
 			.Use<StageMarkerMiddleware>(StageMarkerOptions.For(StageMarker.MessageAcknowledged))
+			.Use<PooledChannelMiddleware>(new PooledChannelOptions{ PoolNameFunc = c => RespondKey.ChannelPoolName})
+			.Use<StageMarkerMiddleware>(StageMarkerOptions.For(RespondStage.RespondChannelCreated))
 			.Use<BasicPropertiesMiddleware>(new BasicPropertiesOptions
 			{
 				PropertyModier = (context, properties) =>
@@ -43,8 +45,6 @@ namespace RawRabbit
 			.Use<StageMarkerMiddleware>(StageMarkerOptions.For(RespondStage.ResponseSerialized))
 			.Use<ReplyToExtractionMiddleware>()
 			.Use<StageMarkerMiddleware>(StageMarkerOptions.For(RespondStage.ReplyToExtracted))
-			.Use<PooledChannelMiddleware>(new PooledChannelOptions{ PoolNameFunc = c => RespondKey.ChannelPoolName})
-			.Use<StageMarkerMiddleware>(StageMarkerOptions.For(RespondStage.RespondChannelCreated))
 			.Use<BasicPublishMiddleware>(new BasicPublishOptions
 			{
 				ExchangeNameFunc = context => context.GetPublicationAddress()?.ExchangeName,

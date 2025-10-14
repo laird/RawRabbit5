@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Polly;
@@ -10,55 +9,40 @@ namespace RawRabbit.Enrichers.Polly.Services
 {
 	public class ChannelFactory : Channel.ChannelFactory
 	{
-		protected Policy CreateChannelPolicy;
-		protected Policy ConnectPolicy;
-		protected Policy GetConnectionPolicy;
+		protected ResiliencePipeline CreateChannelPipeline;
+		protected ResiliencePipeline ConnectPipeline;
+		protected ResiliencePipeline GetConnectionPipeline;
 
-		public ChannelFactory(IConnectionFactory connectionFactory, RawRabbitConfiguration config, ConnectionPolicies policies = null)
+		public ChannelFactory(IConnectionFactory connectionFactory, RawRabbitConfiguration config, ConnectionPolicies? policies = null)
 			: base(connectionFactory, config)
 		{
-			CreateChannelPolicy = policies?.CreateChannel ?? Policy.NoOpAsync();
-			ConnectPolicy = policies?.Connect ?? Policy.NoOpAsync();
-			GetConnectionPolicy = policies?.GetConnection ?? Policy.NoOpAsync();
+			CreateChannelPipeline = policies?.CreateChannel ?? ResiliencePipeline.Empty;
+			ConnectPipeline = policies?.Connect ?? ResiliencePipeline.Empty;
+			GetConnectionPipeline = policies?.GetConnection ?? ResiliencePipeline.Empty;
 		}
 
-		public override Task ConnectAsync(CancellationToken token = default(CancellationToken))
+		public override Task ConnectAsync(CancellationToken token = default)
 		{
-			return ConnectPolicy.ExecuteAsync(
-				action: ct => base.ConnectAsync(ct),
-				contextData: new Dictionary<string, object>
-				{
-					[RetryKey.ConnectionFactory] = ConnectionFactory,
-					[RetryKey.ClientConfiguration] = ClientConfig
-				},
+			return ConnectPipeline.ExecuteAsync(
+				async ct => await base.ConnectAsync(ct),
 				cancellationToken: token
-			);
+			).AsTask();
 		}
 
-		protected override Task<IConnection> GetConnectionAsync(CancellationToken token = default(CancellationToken))
+		protected override Task<IConnection> GetConnectionAsync(CancellationToken token = default)
 		{
-			return GetConnectionPolicy.ExecuteAsync(
-				action: ct => base.GetConnectionAsync(ct),
-				contextData: new Dictionary<string, object>
-				{
-					[RetryKey.ConnectionFactory] = ConnectionFactory,
-					[RetryKey.ClientConfiguration] = ClientConfig
-				},
+			return GetConnectionPipeline.ExecuteAsync(
+				async ct => await base.GetConnectionAsync(ct),
 				cancellationToken: token
-			);
+			).AsTask();
 		}
 
-		public override Task<IModel> CreateChannelAsync(CancellationToken token = default(CancellationToken))
+		public override Task<IModel> CreateChannelAsync(CancellationToken token = default)
 		{
-			return CreateChannelPolicy.ExecuteAsync(
-				action: ct => base.CreateChannelAsync(ct),
-				contextData: new Dictionary<string, object>
-				{
-					[RetryKey.ConnectionFactory] = ConnectionFactory,
-					[RetryKey.ClientConfiguration] = ClientConfig
-				},
+			return CreateChannelPipeline.ExecuteAsync(
+				async ct => await base.CreateChannelAsync(ct),
 				cancellationToken: token
-			);
+			).AsTask();
 		}
 	}
 
@@ -66,18 +50,18 @@ namespace RawRabbit.Enrichers.Polly.Services
 	{
 		/// <summary>
 		/// Used whenever 'CreateChannelAsync' is called.
-		/// Expects an async policy.
+		/// Expects a resilience pipeline.
 		/// </summary>
-		public Policy CreateChannel { get; set; }
+		public ResiliencePipeline? CreateChannel { get; set; }
 
 		/// <summary>
 		/// Used whenever an existing connection is retrieved.
 		/// </summary>
-		public Policy GetConnection { get; set; }
+		public ResiliencePipeline? GetConnection { get; set; }
 
 		/// <summary>
 		/// Used when establishing the initial connection
 		/// </summary>
-		public Policy Connect { get; set; }
+		public ResiliencePipeline? Connect { get; set; }
 	}
 }

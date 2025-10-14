@@ -66,7 +66,7 @@ namespace RawRabbit.Operations.Request.Middleware
 		protected virtual byte[] GetMessageBody(IPipeContext context)
 		{
 			var deliveryArgs = GetDeliverEventArgs(context);
-			return deliveryArgs?.Body ?? new byte[0];
+			return deliveryArgs?.Body.ToArray() ?? new byte[0];
 		}
 
 		protected virtual ExceptionInformation GetExceptionInfo(IPipeContext context)

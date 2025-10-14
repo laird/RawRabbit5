@@ -39,7 +39,8 @@ namespace RawRabbit.Configuration.BasicPublish
 				RoutingKey = GetRoutingKey(type),
 				BasicProperties = GetBasicProperties(type),
 				ExchangeName = GetExchangeName(type),
-				Mandatory = GetMandatory(type)
+				Mandatory = GetMandatory(type),
+				PropertyModifier = GetPropertyModifier(type)
 			};
 		}
 
@@ -47,7 +48,7 @@ namespace RawRabbit.Configuration.BasicPublish
 		{
 			return new BasicPublishConfiguration
 			{
-				BasicProperties = new BasicProperties()
+				BasicProperties = null // Will be created by middleware with proper channel
 			};
 		}
 
@@ -68,15 +69,24 @@ namespace RawRabbit.Configuration.BasicPublish
 
 		protected virtual IBasicProperties GetBasicProperties(Type type)
 		{
-			return new BasicProperties
+			// Return null - BasicPropertiesMiddleware will create it with proper channel
+			return null;
+		}
+
+		protected virtual Action<IBasicProperties> GetPropertyModifier(Type type)
+		{
+			return props =>
 			{
-				Type = type.GetUserFriendlyName(),
-				MessageId = Guid.NewGuid().ToString(),
-				DeliveryMode = _config.PersistentDeliveryMode ? Convert.ToByte(2) : Convert.ToByte(1),
-				ContentType = _serializer.ContentType,
-				ContentEncoding = "UTF-8",
-				UserId =  _config.Username,
-				Headers = new Dictionary<string, object>()
+				props.Type = type.GetUserFriendlyName();
+				props.MessageId = Guid.NewGuid().ToString();
+				props.DeliveryMode = _config.PersistentDeliveryMode ? Convert.ToByte(2) : Convert.ToByte(1);
+				props.ContentType = _serializer.ContentType;
+				props.ContentEncoding = "UTF-8";
+				props.UserId = _config.Username;
+				if (props.Headers == null)
+				{
+					props.Headers = new Dictionary<string, object>();
+				}
 			};
 		}
 

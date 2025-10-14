@@ -29,6 +29,16 @@ required_protocols:
       enforcement: "MANDATORY - Validate builds and tests after code changes"
       applies_to: "Post-migration validation"
 
+    - name: "Continuous Testing Protocol"
+      file: "docs/agents/CONTINUOUS-TESTING-PROTOCOL.md"
+      enforcement: "MANDATORY - Build and validate after every code change"
+      applies_to: "All code implementation work"
+
+    - name: "Parallel Migration Protocol"
+      file: "docs/agents/PARALLEL-MIGRATION-PROTOCOL.md"
+      enforcement: "RECOMMENDED - When spawned in parallel with other coder agents"
+      applies_to: "Multi-project migrations with independent projects"
+
   protocol_enforcement:
     logging:
       - "After migrating project(s), log via append-to-history.sh"

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿using System.Threading;
 using RawRabbit.Common;
 using RawRabbit.Pipe;
 using RawRabbit.Pipe.Middleware;
@@ -9,19 +9,21 @@ namespace RawRabbit.Enrichers.Polly.Middleware
 {
 	public class ExplicitAckMiddleware : Pipe.Middleware.ExplicitAckMiddleware
 	{
-		public ExplicitAckMiddleware(INamingConventions conventions, ITopologyProvider topology, IChannelFactory channelFactory, ExplicitAckOptions options = null)
+		public ExplicitAckMiddleware(INamingConventions conventions, ITopologyProvider topology, IChannelFactory channelFactory, ExplicitAckOptions? options = null)
 				: base(conventions, topology, channelFactory, options) { }
 
 		protected override async Task<Acknowledgement> AcknowledgeMessageAsync(IPipeContext context)
 		{
-			var policy = context.GetPolicy(PolicyKeys.MessageAcknowledge);
-			var result = await policy.ExecuteAsync(
-				action: () => Task.FromResult(base.AcknowledgeMessageAsync(context)),
-				contextData: new Dictionary<string, object>
-				{
-					[RetryKey.PipeContext] = context
-				});
-			return await result;
+			var pipeline = context.GetPolicy(PolicyKeys.MessageAcknowledge);
+			if (pipeline == null)
+			{
+				return await base.AcknowledgeMessageAsync(context);
+			}
+
+			return await pipeline.ExecuteAsync(
+				async ct => await base.AcknowledgeMessageAsync(context),
+				CancellationToken.None
+			);
 		}
 	}
 }

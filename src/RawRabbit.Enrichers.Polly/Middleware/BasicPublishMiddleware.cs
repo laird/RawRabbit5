@@ -1,15 +1,15 @@
-﻿using System.Collections.Generic;
-using RabbitMQ.Client;
+﻿using RabbitMQ.Client;
 using RawRabbit.Common;
 using RawRabbit.Pipe;
 using RawRabbit.Pipe.Middleware;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace RawRabbit.Enrichers.Polly.Middleware
 {
 	public class BasicPublishMiddleware : Pipe.Middleware.BasicPublishMiddleware
 	{
-		public BasicPublishMiddleware(IExclusiveLock exclusive, BasicPublishOptions options = null)
+		public BasicPublishMiddleware(IExclusiveLock exclusive, BasicPublishOptions? options = null)
 			: base(exclusive, options) { }
 
 		protected override void BasicPublish(
@@ -21,22 +21,20 @@ namespace RawRabbit.Enrichers.Polly.Middleware
 				byte[] body,
 				IPipeContext context)
 		{
-			var policy = context.GetPolicy(PolicyKeys.BasicPublish);
-			var policyTask = policy.ExecuteAsync(
-				action: () =>
+			var pipeline = context.GetPolicy(PolicyKeys.BasicPublish);
+			if (pipeline == null)
+			{
+				base.BasicPublish(channel, exchange, routingKey, mandatory, basicProps, body, context);
+				return;
+			}
+
+			var policyTask = pipeline.ExecuteAsync(
+				async ct =>
 				{
 					base.BasicPublish(channel, exchange, routingKey, mandatory, basicProps, body, context);
-					return Task.FromResult(true);
+					await Task.CompletedTask;
 				},
-				contextData: new Dictionary<string, object>
-				{
-					[RetryKey.PipeContext] = context,
-					[RetryKey.ExchangeName] = exchange,
-					[RetryKey.RoutingKey] = routingKey,
-					[RetryKey.PublishMandatory] = mandatory,
-					[RetryKey.BasicProperties] = basicProps,
-					[RetryKey.PublishBody] = body,
-				});
+				CancellationToken.None);
 			policyTask.ConfigureAwait(false);
 			policyTask.GetAwaiter().GetResult();
 		}

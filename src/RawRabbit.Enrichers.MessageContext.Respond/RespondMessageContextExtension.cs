@@ -45,7 +45,7 @@ namespace RawRabbit
 		public static Task<IPipeContext> RespondAsync<TRequest, TResponse, TMessageContext>(
 			this IBusClient client,
 			Func<TRequest, TMessageContext, Task<TResponse>> handler,
-			Action<IRespondContext> context = null,
+			Action<IRespondContext>? context = null,
 			CancellationToken ct = default(CancellationToken))
 		{
 			return client
@@ -62,7 +62,7 @@ namespace RawRabbit
 		public static Task<IPipeContext> RespondAsync<TRequest, TResponse, TMessageContext>(
 			this IBusClient client,
 			Func<TRequest, TMessageContext, Task<TypedAcknowlegement<TResponse>>> handler,
-			Action<IRespondContext> context = null,
+			Action<IRespondContext>? context = null,
 			CancellationToken ct = default(CancellationToken))
 		{
 			return client

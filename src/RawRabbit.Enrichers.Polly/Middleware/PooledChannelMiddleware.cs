@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using RabbitMQ.Client;
 using RawRabbit.Channel;
@@ -10,22 +9,21 @@ namespace RawRabbit.Enrichers.Polly.Middleware
 {
 	public class PooledChannelMiddleware : Pipe.Middleware.PooledChannelMiddleware
 	{
-		public PooledChannelMiddleware(IChannelPoolFactory poolFactory, PooledChannelOptions options = null)
+		public PooledChannelMiddleware(IChannelPoolFactory poolFactory, PooledChannelOptions? options = null)
 			: base(poolFactory, options) { }
 
 		protected override Task<IModel> GetChannelAsync(IPipeContext context, CancellationToken token)
 		{
-			var policy = context.GetPolicy(PolicyKeys.ChannelCreate);
-			return policy.ExecuteAsync(
-				action: ct => base.GetChannelAsync(context, ct),
-				cancellationToken: token,
-				contextData: new Dictionary<string, object>
-				{
-					[RetryKey.PipeContext] = context,
-					[RetryKey.CancellationToken] = token,
-					[RetryKey.ChannelPoolFactory] = PoolFactory
-				}
-			);
+			var pipeline = context.GetPolicy(PolicyKeys.ChannelCreate);
+			if (pipeline == null)
+			{
+				return base.GetChannelAsync(context, token);
+			}
+
+			return pipeline.ExecuteAsync(
+				async ct => await base.GetChannelAsync(context, ct),
+				cancellationToken: token
+			).AsTask();
 		}
 	}
 }

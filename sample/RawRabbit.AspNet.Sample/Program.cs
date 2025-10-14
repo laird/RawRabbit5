@@ -1,20 +1,17 @@
-﻿using System.IO;
-using Microsoft.AspNetCore.Hosting;
+﻿using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using RawRabbit.AspNet.Sample;
 
-namespace RawRabbit.AspNet.Sample
-{
-	public class Program
-	{
-		public static void Main(string[] args)
-		{
-			var host = new WebHostBuilder()
-				.UseKestrel()
-				.UseContentRoot(Directory.GetCurrentDirectory())
-				.UseIISIntegration()
-				.UseStartup<Startup>()
-				.Build();
+var builder = WebApplication.CreateBuilder(args);
 
-			host.Run();
-		}
-	}
-}
+// Configure services
+var startup = new Startup(builder.Environment, builder.Configuration);
+startup.ConfigureServices(builder.Services);
+
+var app = builder.Build();
+
+// Configure middleware
+startup.Configure(app, app.Environment);
+
+app.Run();

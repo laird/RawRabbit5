@@ -120,7 +120,46 @@ ADRs are **living documents** that track architectural decisions throughout thei
 
 ### Protocol Reference
 
-**Full Protocol**: `docs/agents/agents/ADR-LIFECYCLE-PROTOCOL.md`
+**Full Protocol**: `docs/agents/ADR-LIFECYCLE-PROTOCOL.md`
+
+### ADR File Naming Convention (MANDATORY)
+
+**All ADR files MUST follow this exact naming pattern**:
+
+```
+ADR #### Title With Spaces.md
+```
+
+**Format Rules**:
+- Prefix: `ADR` (uppercase, with space after)
+- Number: Four digits with leading zeros (`0001`, `0002`, `0042`, `1234`)
+- Space after number
+- Title: Human-readable title with spaces between words (Title Case)
+- Extension: `.md`
+
+**✅ Correct Examples**:
+- `ADR 0001 Target Framework NET9.md`
+- `ADR 0002 RabbitMQ Client Upgrade.md`
+- `ADR 0015 Dependency Injection Container Selection.md`
+
+**❌ Incorrect Examples**:
+- `0001-target-framework.md` ❌ No ADR prefix, uses dashes
+- `ADR-0002-upgrade.md` ❌ Uses dashes instead of spaces
+- `ADR0003Decision.md` ❌ No spaces
+
+**Creating New ADR**:
+```bash
+# Get next ADR number
+LAST_ADR=$(ls docs/adr/ADR\ *.md | tail -1 | sed 's/.*ADR //' | sed 's/ .*//')
+NEXT_NUM=$(printf "%04d" $((10#$LAST_ADR + 1)))
+
+# Create with correct naming
+touch "docs/adr/ADR $NEXT_NUM Your Decision Title.md"
+```
+
+See `ADR-LIFECYCLE-PROTOCOL.md` for complete naming requirements.
+
+---
 
 ### ADR Lifecycle (7 Stages)
 

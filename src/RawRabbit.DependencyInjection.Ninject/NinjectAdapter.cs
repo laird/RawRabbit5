@@ -7,6 +7,7 @@ using RawRabbit.DependencyInjection;
 
 namespace RawRabbit.DependencyInjection.Ninject
 {
+	[Obsolete("Ninject DI adapter is deprecated. Use Microsoft.Extensions.DependencyInjection instead (RawRabbit.DependencyInjection.ServiceCollection). This package will be removed in a future version.")]
 	public class NinjectAdapter : IDependencyResolver
 	{
 		private readonly IContext _context;

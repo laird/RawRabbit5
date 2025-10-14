@@ -42,7 +42,7 @@ namespace RawRabbit.Configuration.Publisher
 				Exchange = _exchange.Create(exchangeName),
 				ExchangeName = exchangeName,
 				RoutingKey = routingKey,
-				BasicProperties = new BasicProperties()
+				BasicProperties = null // Will be created by BasicPropertiesMiddleware with proper channel
 			};
 		}
 	}

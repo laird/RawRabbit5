@@ -4,6 +4,6 @@ namespace RawRabbit.Messages.Sample
 {
 	public class ValueCreationFailed
 	{
-		public Exception Exception { get; set; }
+		public Exception? Exception { get; set; }
 	}
 }

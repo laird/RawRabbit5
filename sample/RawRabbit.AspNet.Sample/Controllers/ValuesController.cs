@@ -16,10 +16,10 @@ namespace RawRabbit.AspNet.Sample.Controllers
 		private readonly Random _random;
 		private readonly ILogger<ValuesController> _logger;
 
-		public ValuesController(IBusClient legacyBusClient, ILoggerFactory loggerFactory)
+		public ValuesController(IBusClient legacyBusClient, ILogger<ValuesController> logger)
 		{
 			_busClient = legacyBusClient;
-			_logger = loggerFactory.CreateLogger<ValuesController>();
+			_logger = logger;
 			_random = new Random();
 		}
 
@@ -51,9 +51,10 @@ namespace RawRabbit.AspNet.Sample.Controllers
 				return StatusCode((int)HttpStatusCode.InternalServerError, $"No response received. Is the Console App started? \n\nException: {e}");
 			}
 
-			_logger.LogInformation("Successfully created {valueCount} values", valueSequence.Task.Result.Values.Count);
+			var result = valueSequence.Task.Result;
+			_logger.LogInformation("Successfully created {valueCount} values", result?.Values?.Count ?? 0);
 
-			return Ok(valueSequence.Task.Result.Values);
+			return Ok(result?.Values ?? new List<string>());
 		}
 
 		[HttpGet("api/values/{id}")]
@@ -61,7 +62,7 @@ namespace RawRabbit.AspNet.Sample.Controllers
 		{
 			_logger.LogInformation("Requesting Value with id {valueId}", id);
 			var response = await _busClient.RequestAsync<ValueRequest, ValueResponse>(new ValueRequest {Value = id});
-			return response.Value;
+			return response?.Value ?? string.Empty;
 		}
 	}
 }

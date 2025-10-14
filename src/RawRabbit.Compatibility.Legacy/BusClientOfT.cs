@@ -1,6 +1,5 @@
 using System;
 using System.Threading.Tasks;
-using RabbitMQ.Client.Framing;
 using RawRabbit.Common;
 using RawRabbit.Compatibility.Legacy.Configuration;
 using RawRabbit.Compatibility.Legacy.Configuration.Publish;
@@ -102,11 +101,11 @@ namespace RawRabbit.Compatibility.Legacy
 				Exchange = exchangeCfg,
 				ExchangeName = config.Exchange.ExchangeName,
 				RoutingKey = config.RoutingKey,
-				BasicProperties = new BasicProperties(),
+				BasicProperties = null, // Will be created by BasicPropertiesMiddleware
 				Mandatory = config.BasicReturn != null,
-				ReturnCallback = config.BasicReturn
+				ReturnCallback = config.BasicReturn,
+				PropertyModifier = config.PropertyModifier // Store for middleware to use
 			};
-			config.PropertyModifier?.Invoke(publisherCfg.BasicProperties);
 
 			Action<IPipeContext> ctxAction = context =>
 			{
@@ -200,7 +199,7 @@ namespace RawRabbit.Compatibility.Legacy
 				{
 					Exchange = exchangeCfg,
 					ExchangeName = config.Exchange.ExchangeName,
-					BasicProperties = new BasicProperties(),
+					BasicProperties = null, // Will be created by BasicPropertiesMiddleware
 					RoutingKey = config.RoutingKey,
 					Mandatory = false
 				},

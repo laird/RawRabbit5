@@ -2,6 +2,6 @@
 {
 	public class MessageContext
 	{
-		public string Source { get; set; }
+		public string Source { get; set; } = string.Empty;
 	}
 }

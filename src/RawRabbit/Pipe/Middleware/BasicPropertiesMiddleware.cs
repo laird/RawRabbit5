@@ -25,14 +25,37 @@ namespace RawRabbit.Pipe.Middleware
 		public BasicPropertiesMiddleware(ISerializer serializer, BasicPropertiesOptions options = null)
 		{
 			Serializer = serializer;
-			PropertyModifier = options?.PropertyModier ?? ((ctx, props) => ctx.Get<Action<IBasicProperties>>(PipeKey.BasicPropertyModifier)?.Invoke(props));
-			PostCreateAction = options?.PostCreateAction;
-			GetOrCreatePropsFunc = options?.GetOrCreatePropsFunc ?? (ctx => ctx.GetBasicProperties() ?? new BasicProperties
+			PropertyModifier = options?.PropertyModier ?? ((ctx, props) =>
 			{
-				MessageId = Guid.NewGuid().ToString(),
-				Headers = new Dictionary<string, object>(),
-				Persistent = ctx.GetClientConfiguration().PersistentDeliveryMode,
-				ContentType = Serializer.ContentType
+				// Apply modifier from PipeKey first
+				ctx.Get<Action<IBasicProperties>>(PipeKey.BasicPropertyModifier)?.Invoke(props);
+
+				// Apply modifier from configuration if present
+				var basicPublishConfig = ctx.GetBasicPublishConfiguration();
+				basicPublishConfig?.PropertyModifier?.Invoke(props);
+			});
+			PostCreateAction = options?.PostCreateAction;
+			GetOrCreatePropsFunc = options?.GetOrCreatePropsFunc ?? (ctx =>
+			{
+				var existingProps = ctx.GetBasicProperties();
+				if (existingProps != null)
+				{
+					return existingProps;
+				}
+
+				// Get channel to create properties
+				var channel = ctx.GetTransientChannel() ?? ctx.GetChannel();
+				if (channel == null)
+				{
+					throw new InvalidOperationException("Cannot create BasicProperties without a channel. Ensure channel middleware runs before BasicPropertiesMiddleware.");
+				}
+
+				var props = channel.CreateBasicProperties();
+				props.MessageId = Guid.NewGuid().ToString();
+				props.Headers = new Dictionary<string, object>();
+				props.Persistent = ctx.GetClientConfiguration().PersistentDeliveryMode;
+				props.ContentType = Serializer.ContentType;
+				return props;
 			});
 		}
 

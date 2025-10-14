@@ -56,11 +56,14 @@ namespace RawRabbit.Configuration.Publisher
 
 		public IBasicPublishConfigurationBuilder WithProperties(Action<IBasicProperties> propAction)
 		{
-			if (Config.BasicProperties == null)
+			// Store the property modification action for later execution
+			// BasicProperties will be created by BasicPropertiesMiddleware with proper channel
+			var existingAction = Config.PropertyModifier;
+			Config.PropertyModifier = props =>
 			{
-				Config.BasicProperties = new BasicProperties();
-			}
-			propAction?.Invoke(Config.BasicProperties);
+				existingAction?.Invoke(props);
+				propAction?.Invoke(props);
+			};
 			return this;
 		}
 	}

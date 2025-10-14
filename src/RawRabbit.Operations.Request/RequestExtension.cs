@@ -29,6 +29,7 @@ namespace RawRabbit
 					RoutingKeyFunc = context => context.GetConsumeConfiguration()?.RoutingKey
 				})
 				.Use<BodySerializationMiddleware>()
+				.Use<TransientChannelMiddleware>()
 				.Use<Operations.Request.Middleware.BasicPropertiesMiddleware>(new BasicPropertiesOptions
 				{
 					PostCreateAction = (ctx, props) =>

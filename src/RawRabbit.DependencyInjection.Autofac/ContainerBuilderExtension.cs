@@ -9,11 +9,11 @@ namespace RawRabbit.DependencyInjection.Autofac
 	{
 		private const string RawRabbit = "RawRabbit";
 
-		public static ContainerBuilder RegisterRawRabbit(this ContainerBuilder builder, RawRabbitOptions options = null)
+		public static ContainerBuilder RegisterRawRabbit(this ContainerBuilder builder, RawRabbitOptions? options = null)
 		{
-			builder.RegisterSource(new AnyConcreteTypeNotAlreadyRegisteredSource(type => type.Namespace.StartsWith(RawRabbit)));
+			builder.RegisterSource(new AnyConcreteTypeNotAlreadyRegisteredSource(type => type.Namespace?.StartsWith(RawRabbit) ?? false));
 			var adapter = new ContainerBuilderAdapter(builder);
-			adapter.AddRawRabbit(options);
+			adapter.AddRawRabbit(options!);
 			return builder;
 		}
 	}

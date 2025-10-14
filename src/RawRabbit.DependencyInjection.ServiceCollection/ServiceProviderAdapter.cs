@@ -25,7 +25,7 @@ namespace RawRabbit.DependencyInjection.ServiceCollection
 
 		public object GetService(Type serviceType, params object[] additional)
 		{
-			additional = additional ?? new object[0];
+			additional ??= [];
 			var service = _provider.GetService(serviceType);
 			return service ?? ActivatorUtilities.CreateInstance(_provider, serviceType, additional);
 		}

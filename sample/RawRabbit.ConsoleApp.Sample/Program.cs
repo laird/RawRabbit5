@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
@@ -14,17 +15,17 @@ namespace RawRabbit.ConsoleApp.Sample
 {
 	public class Program
 	{
-		private static IBusClient _client;
+		private static IBusClient? _client;
 
-		public static void Main(string[] args)
+		public static async Task Main(string[] args)
 		{
-			RunAsync().GetAwaiter().GetResult();
+			await RunAsync();
 		}
 
 		public static async Task RunAsync()
 		{
 			Log.Logger = new LoggerConfiguration()
-				.WriteTo.LiterateConsole()
+				.WriteTo.Console()
 				.CreateLogger();
 
 			_client = RawRabbitFactory.CreateSingleton(new RawRabbitOptions
@@ -53,6 +54,11 @@ namespace RawRabbit.ConsoleApp.Sample
 
 		private static Task ServerValuesAsync(ValuesRequested message, MessageContext ctx)
 		{
+			if (_client == null)
+			{
+				throw new InvalidOperationException("Bus client not initialized");
+			}
+
 			var values = new List<string>();
 			for (var i = 0; i < message.NumberOfValues; i++)
 			{

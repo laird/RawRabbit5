@@ -131,16 +131,45 @@ namespace RawRabbit.Consumer
 			}
 			var cancelTcs = new TaskCompletionSource<string>();
 			token.Register(() => cancelTcs.TrySetCanceled());
-			var tag = eventConsumer.ConsumerTag;
+
+			// In RabbitMQ.Client 6.x+, ConsumerCancelled event provides ConsumerTags array
+			string? capturedTag = null;
+
+			// Try to get the consumer tag from Registered event if not already set
+			EventHandler<ConsumerEventArgs>? registeredHandler = null;
+			registeredHandler = (sender, args) =>
+			{
+				if (args.ConsumerTags.Length > 0)
+				{
+					capturedTag = args.ConsumerTags[0];
+				}
+				eventConsumer.Registered -= registeredHandler;
+			};
+			eventConsumer.Registered += registeredHandler;
+
 			consumer.ConsumerCancelled += (sender, args) =>
 			{
-				if (args.ConsumerTag != tag)
+				// Check if any of the cancelled tags match our captured tag
+				if (capturedTag != null && args.ConsumerTags.Length > 0)
 				{
-					return;
+					foreach (var tag in args.ConsumerTags)
+					{
+						if (tag == capturedTag)
+						{
+							cancelTcs.TrySetResult(tag);
+							return;
+						}
+					}
 				}
-				cancelTcs.TrySetResult(args.ConsumerTag);
+				// If no match or no captured tag, just return the first tag
+				cancelTcs.TrySetResult(args.ConsumerTags.Length > 0 ? args.ConsumerTags[0] : string.Empty);
 			};
-			consumer.Model.BasicCancel(eventConsumer.ConsumerTag);
+
+			// Cancel using the first consumer tag if available
+			if (capturedTag != null)
+			{
+				consumer.Model.BasicCancel(capturedTag);
+			}
 			return cancelTcs.Task;
 		}
 

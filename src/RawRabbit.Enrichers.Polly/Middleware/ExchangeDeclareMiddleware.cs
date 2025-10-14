@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using RawRabbit.Common;
 using RawRabbit.Configuration.Exchange;
@@ -10,22 +9,21 @@ namespace RawRabbit.Enrichers.Polly.Middleware
 {
 	public class ExchangeDeclareMiddleware : Pipe.Middleware.ExchangeDeclareMiddleware
 	{
-		public ExchangeDeclareMiddleware(ITopologyProvider topologyProvider, ExchangeDeclareOptions options = null)
+		public ExchangeDeclareMiddleware(ITopologyProvider topologyProvider, ExchangeDeclareOptions? options = null)
 			: base(topologyProvider, options) { }
 
 		protected override Task DeclareExchangeAsync(ExchangeDeclaration exchange, IPipeContext context, CancellationToken token)
 		{
-			var policy = context.GetPolicy(PolicyKeys.ExchangeDeclare);
-			return policy.ExecuteAsync(
-				action: ct => base.DeclareExchangeAsync(exchange, context, ct),
-				cancellationToken: token,
-				contextData: new Dictionary<string, object>
-				{
-					[RetryKey.TopologyProvider] = TopologyProvider,
-					[RetryKey.ExchangeDeclaration] = exchange,
-					[RetryKey.PipeContext] = context,
-					[RetryKey.CancellationToken] = token,
-				});
+			var pipeline = context.GetPolicy(PolicyKeys.ExchangeDeclare);
+			if (pipeline == null)
+			{
+				return base.DeclareExchangeAsync(exchange, context, token);
+			}
+
+			return pipeline.ExecuteAsync(
+				async ct => await base.DeclareExchangeAsync(exchange, context, ct),
+				cancellationToken: token
+			).AsTask();
 		}
 	}
 }

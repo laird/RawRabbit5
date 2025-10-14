@@ -1,7 +1,7 @@
 # ADR Lifecycle Protocol
 
-**Version**: 1.0
-**Date**: 2025-10-12
+**Version**: 1.1
+**Date**: 2025-10-13
 **Purpose**: Ensure ADRs are living documents updated throughout the decision lifecycle
 **Applicability**: All architectural decisions in any .NET project
 
@@ -10,6 +10,68 @@
 ## Overview
 
 Architecture Decision Records (ADRs) are **living documents** that must be updated throughout the entire decision lifecycle, from initial research through implementation and post-implementation review. This protocol ensures ADRs accurately reflect the evolution of architectural decisions and serve as reliable historical records.
+
+---
+
+## ADR File Naming Convention (MANDATORY)
+
+**All ADR files MUST follow this exact naming pattern**:
+
+```
+ADR #### Title With Spaces.md
+```
+
+**Format Rules**:
+- Prefix: `ADR` (uppercase, with space after)
+- Number: Four digits with leading zeros (`0001`, `0002`, `0042`, `1234`)
+- Space after number
+- Title: Human-readable title with spaces between words (Title Case)
+- Extension: `.md`
+
+### ✅ Correct Examples
+
+```
+ADR 0001 Target Framework NET9.md
+ADR 0002 RabbitMQ Client Upgrade.md
+ADR 0003 ZeroFormatter Deprecation.md
+ADR 0015 Dependency Injection Container Selection.md
+ADR 0042 Serialization Enricher Strategy.md
+```
+
+### ❌ Incorrect Examples
+
+```
+0001-target-framework-net9.md          ❌ No ADR prefix, uses dashes
+adr-0002-rabbitmq-upgrade.md            ❌ Lowercase, uses dashes
+ADR-0003-ZeroFormatter-Deprecation.md   ❌ Uses dashes instead of spaces
+ADR0004Ninject.md                       ❌ No spaces
+ADR 04 Short Title.md                   ❌ Only 2 digits (need 4)
+```
+
+### Rationale
+
+- **Readability**: Spaces make titles easier to read in file browsers
+- **Sortability**: Four-digit numbers ensure proper alphanumeric sorting (0001 comes before 0100)
+- **Consistency**: Single standard prevents confusion
+- **Searchability**: "ADR ####" pattern easy to grep/search
+
+### Creating New ADR
+
+```bash
+# Get next ADR number
+LAST_ADR=$(ls docs/adr/ADR\ *.md | tail -1 | sed 's/.*ADR //' | sed 's/ .*//')
+NEXT_NUM=$(printf "%04d" $((10#$LAST_ADR + 1)))
+
+# Create new ADR with correct naming
+touch "docs/adr/ADR $NEXT_NUM Your Decision Title.md"
+```
+
+### Enforcement
+
+Agents MUST:
+- Use correct naming when creating ADRs
+- Rename any incorrectly named ADRs discovered
+- Document the naming convention in project README/CLAUDE.md
 
 ---
 

@@ -1,29 +1,16 @@
-﻿using Ninject;
+﻿using System;
+using Ninject;
 using Ninject.Modules;
 using RawRabbit.DependencyInjection;
 using RawRabbit.Instantiation;
 
 namespace RawRabbit.DependencyInjection.Ninject
 {
+	[Obsolete("Ninject DI adapter is deprecated. Use Microsoft.Extensions.DependencyInjection instead (RawRabbit.DependencyInjection.ServiceCollection). This package will be removed in a future version.")]
 	public class RawRabbitModule : NinjectModule
 	{
 		public override void Load()
 		{
-#if NETSTANDARD1_5
-			KernelConfiguration
-				.Bind<IDependencyResolver>()
-				.ToMethod(context => new NinjectAdapter(context));
-
-			KernelConfiguration
-				.Bind<IInstanceFactory>()
-				.ToMethod(context => RawRabbitFactory.CreateInstanceFactory(context.Kernel.Get<RawRabbitOptions>()))
-				.InSingletonScope();
-
-			KernelConfiguration
-				.Bind<IBusClient>()
-				.ToMethod(context => context.Kernel.Get<IInstanceFactory>().Create());
-#endif
-#if NET451
 			Kernel
 				.Bind<IDependencyResolver>()
 				.ToMethod(context => new NinjectAdapter(context));
@@ -36,7 +23,6 @@ namespace RawRabbit.DependencyInjection.Ninject
 			Kernel
 				.Bind<IBusClient>()
 				.ToMethod(context => context.Kernel.Get<IInstanceFactory>().Create());
-#endif
 		}
 	}
 }

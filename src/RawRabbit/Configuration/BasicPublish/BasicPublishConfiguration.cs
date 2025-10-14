@@ -1,4 +1,5 @@
-﻿using RabbitMQ.Client;
+using System;
+using RabbitMQ.Client;
 
 namespace RawRabbit.Configuration.BasicPublish
 {
@@ -9,5 +10,6 @@ namespace RawRabbit.Configuration.BasicPublish
 		public bool Mandatory { get; set; }
 		public IBasicProperties BasicProperties { get; set; }
 		public byte[] Body { get; set; }
+		public Action<IBasicProperties> PropertyModifier { get; set; }
 	}
 }

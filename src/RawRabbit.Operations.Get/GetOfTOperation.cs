@@ -21,7 +21,7 @@ namespace RawRabbit
 			.Use<BodyDeserializationMiddleware>(new MessageDeserializationOptions
 			{
 				BodyTypeFunc = context => context.GetMessageType(),
-				BodyFunc = context => context.GetBasicGetResult()?.Body
+				BodyFunc = context => context.GetBasicGetResult()?.Body.ToArray()
 			})
 			.Use<AckableResultMiddleware>(new AckableResultOptions
 			{

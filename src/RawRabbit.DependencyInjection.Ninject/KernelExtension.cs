@@ -1,31 +1,21 @@
-﻿using Ninject;
+﻿using System;
+using Ninject;
 using RawRabbit.Instantiation;
 
 namespace RawRabbit.DependencyInjection.Ninject
 {
+	[Obsolete("Ninject DI adapter is deprecated. Use Microsoft.Extensions.DependencyInjection instead (RawRabbit.DependencyInjection.ServiceCollection). This package will be removed in a future version.")]
 	public static class KernelExtension
 	{
-#if NETSTANDARD1_5
-		public static IKernelConfiguration RegisterRawRabbit(this IKernelConfiguration config, RawRabbitOptions options = null)
+		[Obsolete("Ninject DI adapter is deprecated. Use Microsoft.Extensions.DependencyInjection instead (RawRabbit.DependencyInjection.ServiceCollection). This package will be removed in a future version.")]
+		public static IKernel RegisterRawRabbit(this IKernel kernel, RawRabbitOptions? options = null)
 		{
 			if (options != null)
 			{
-				config.Bind<RawRabbitOptions>().ToConstant(options);
+				kernel.Bind<RawRabbitOptions>().ToConstant(options);
 			}
-			config.Load<RawRabbitModule>();
-			return config;
+			kernel.Load<RawRabbitModule>();
+			return kernel;
 		}
-#endif
-#if NET451
-		public static IKernel RegisterRawRabbit(this IKernel config, RawRabbitOptions options = null)
-		{
-			if (options != null)
-			{
-				config.Bind<RawRabbitOptions>().ToConstant(options);
-			}
-			config.Load<RawRabbitModule>();
-			return config;
-		}
-#endif
 	}
 }

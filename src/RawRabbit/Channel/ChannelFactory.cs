@@ -104,9 +104,34 @@ namespace RawRabbit.Channel
 		{
 			foreach (var channel in Channels)
 			{
-				channel?.Dispose();
+				try
+				{
+					// RabbitMQ.Client 6.x has a bug where disposing can throw NullReferenceException
+					// in AutorecoveringModel.Abort(). This is a defensive workaround.
+					if (channel != null && channel.IsOpen)
+					{
+						channel.Close();
+					}
+					channel?.Dispose();
+				}
+				catch (Exception ex)
+				{
+					_logger.Warn("Exception disposing channel: {exceptionMessage}", ex.Message);
+				}
 			}
-			Connection?.Dispose();
+
+			try
+			{
+				if (Connection != null && Connection.IsOpen)
+				{
+					Connection.Close();
+				}
+				Connection?.Dispose();
+			}
+			catch (Exception ex)
+			{
+				_logger.Warn("Exception disposing connection: {exceptionMessage}", ex.Message);
+			}
 		}
 	}
 }

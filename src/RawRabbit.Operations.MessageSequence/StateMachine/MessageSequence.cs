@@ -193,9 +193,30 @@ namespace RawRabbit.Operations.MessageSequence.StateMachine
 					_logger.Debug("Disposing subscriptions for Message Sequence '{sequenceId}'.", Model.Id);
 					foreach (var subscription in _subscriptions)
 					{
-						subscription.Dispose();
+						try
+						{
+							subscription.Dispose();
+						}
+						catch (Exception ex)
+						{
+							_logger.Warn("Exception disposing subscription: {exceptionMessage}", ex.Message);
+						}
 					}
-					_channel.Dispose();
+
+					try
+					{
+						// RabbitMQ.Client 6.x has a bug where disposing can throw NullReferenceException
+						// in AutorecoveringModel.Abort(). This is a defensive workaround.
+						if (_channel != null && _channel.IsOpen)
+						{
+							_channel.Close();
+						}
+						_channel?.Dispose();
+					}
+					catch (Exception ex)
+					{
+						_logger.Warn("Exception disposing channel in MessageSequence: {exceptionMessage}", ex.Message);
+					}
 				});
 
 			var trigger = StateMachine.SetTriggerParameters<TMessage>(typeof(TMessage));
@@ -240,7 +261,7 @@ namespace RawRabbit.Operations.MessageSequence.StateMachine
 				{
 					context.Properties.Add(StateMachineKey.ModelId, Model.Id);
 					context.Properties.Add(StateMachineKey.Machine, this);
-					context.Properties.TryAdd(PipeKey.Channel, _channel);
+					DictionaryExtensions.TryAdd(context.Properties, PipeKey.Channel, _channel);
 				};
 				var ctx = _client.InvokeAsync(triggerCfg.Pipe, triggerCfg.Context).GetAwaiter().GetResult();
 				_subscriptions.Add(ctx.GetSubscription());

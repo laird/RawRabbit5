@@ -1,7 +1,12 @@
+---
+name: adr-lifecycle
+description: ADR lifecycle protocol with 7 stages from creation to deprecation (MADR 3.0.0 format)
+---
+
 # ADR Lifecycle Protocol
 
-**Version**: 1.0
-**Date**: 2025-10-12
+**Version**: 1.1
+**Date**: 2025-10-13
 **Purpose**: Ensure ADRs are living documents updated throughout the decision lifecycle
 **Applicability**: All architectural decisions in any .NET project
 
@@ -10,6 +15,68 @@
 ## Overview
 
 Architecture Decision Records (ADRs) are **living documents** that must be updated throughout the entire decision lifecycle, from initial research through implementation and post-implementation review. This protocol ensures ADRs accurately reflect the evolution of architectural decisions and serve as reliable historical records.
+
+---
+
+## ADR File Naming Convention (MANDATORY)
+
+**All ADR files MUST follow this exact naming pattern**:
+
+```
+ADR #### Title With Spaces.md
+```
+
+**Format Rules**:
+- Prefix: `ADR` (uppercase, with space after)
+- Number: Four digits with leading zeros (`0001`, `0002`, `0042`, `1234`)
+- Space after number
+- Title: Human-readable title with spaces between words (Title Case)
+- Extension: `.md`
+
+### ✅ Correct Examples
+
+```
+ADR 0001 Target Framework NET9.md
+ADR 0002 RabbitMQ Client Upgrade.md
+ADR 0003 ZeroFormatter Deprecation.md
+ADR 0015 Dependency Injection Container Selection.md
+ADR 0042 Serialization Enricher Strategy.md
+```
+
+### ❌ Incorrect Examples
+
+```
+0001-target-framework-net9.md          ❌ No ADR prefix, uses dashes
+adr-0002-rabbitmq-upgrade.md            ❌ Lowercase, uses dashes
+ADR 0003 ZeroFormatter-Deprecation.md   ❌ Uses dashes instead of spaces
+ADR0004Ninject.md                       ❌ No spaces
+ADR 04 Short Title.md                   ❌ Only 2 digits (need 4)
+```
+
+### Rationale
+
+- **Readability**: Spaces make titles easier to read in file browsers
+- **Sortability**: Four-digit numbers ensure proper alphanumeric sorting (0001 comes before 0100)
+- **Consistency**: Single standard prevents confusion
+- **Searchability**: "ADR ####" pattern easy to grep/search
+
+### Creating New ADR
+
+```bash
+# Get next ADR number
+LAST_ADR=$(ls docs/adr/ADR\ *.md | tail -1 | sed 's/.*ADR //' | sed 's/ .*//')
+NEXT_NUM=$(printf "%04d" $((10#$LAST_ADR + 1)))
+
+# Create new ADR with correct naming
+touch "docs/adr/ADR $NEXT_NUM Your Decision Title.md"
+```
+
+### Enforcement
+
+Agents MUST:
+- Use correct naming when creating ADRs
+- Rename any incorrectly named ADRs discovered
+- Document the naming convention in project README/CLAUDE.md
 
 ---
 
@@ -27,7 +94,7 @@ Architecture Decision Records (ADRs) are **living documents** that must be updat
 
 **ADR Content**:
 ```markdown
-# ADR-XXXX: [Decision Title]
+# ADR ####: [Decision Title]
 
 ## Status
 
@@ -151,7 +218,91 @@ Need to decide which containers to maintain for modern .NET compatibility.
 **Status**: Research ongoing, scores incomplete
 ```
 
-**Commit Message**: `docs: Update ADR-XXXX with [Option Name] research findings`
+**Commit Message**: `docs: Update ADR #### with [Option Name] research findings`
+
+---
+
+### Stage 2.5: Spike Validation (HIGH-RISK DECISIONS ONLY) → Status: `proposed` (spikes in progress)
+
+**NEW per Retrospective Recommendation 2**
+
+**When**: For high-risk architectural decisions requiring empirical validation
+
+**High-Risk Decision Criteria** (require spikes):
+- Dependency major version changes (e.g., RabbitMQ.Client 5→6, Polly 5→8)
+- Framework migrations (e.g., .NET Standard → .NET 8)
+- Architectural pattern changes (e.g., sync → async)
+- Removal of features (e.g., deprecating a DI container)
+
+**Actions**:
+1. **Create spike branches for top 2-3 alternatives** (1-2 days)
+   - `spike/adr-####-option-1-[name]`
+   - `spike/adr-####-option-2-[name]`
+2. **For each spike**:
+   - Test option on single representative project
+   - Attempt actual implementation (not just research)
+   - Run tests and document pass rates
+   - Count compilation errors, file changes required
+   - Measure performance if relevant
+3. **Document empirical findings in ADR**
+4. **Update evaluation matrix with spike results**
+5. **Allow 24-48hr stakeholder review period** before Stage 4
+
+**ADR Updates**:
+```markdown
+## Spike Validation Results
+
+### Spike 1: Option 2 (RabbitMQ.Client 6.8.1 LTS)
+
+**Branch**: `spike/adr-0002-option-2-rabbitmq-6.8.1`
+**Duration**: 4 hours
+**Files Modified**: 23 files
+**Compilation Errors**: 12 errors (all fixable)
+**Test Results**:
+- Unit tests: 89% passing (17/156 failing)
+- Integration tests: 100% passing (112/112)
+**Issues Found**:
+- `IRecoverable.Recovery` event signature changed
+- Publisher confirms API changed (events → WaitForConfirmsOrDie)
+- `BasicProperties` constructor now protected
+
+**Effort Estimate**: 12-15 hours based on spike
+
+### Spike 2: Option 3 (RabbitMQ.Client 7.x)
+
+**Branch**: `spike/adr-0002-option-3-rabbitmq-7.x`
+**Duration**: 3.5 hours
+**Files Modified**: 18 files
+**Compilation Errors**: 6 errors (all fixable)
+**Test Results**:
+- Unit tests: 94% passing (9/156 failing)
+- Integration tests: 100% passing (112/112)
+**Issues Found**:
+- Simpler async patterns (designed for .NET 6+)
+- Connection pooling simplified
+
+**Effort Estimate**: 8-10 hours based on spike
+
+## Evaluation Matrix (Updated with Spike Data)
+
+| Criterion | Weight | Option 2 (6.8.1 LTS) | Option 3 (7.x) |
+|-----------|--------|----------------------|----------------|
+| API Compatibility (spike) | High | 3/5 (12 errors) | 4/5 (6 errors) |
+| Test Pass Rate (spike) | High | 3/5 (89%) | 4/5 (94%) |
+| Migration Effort (spike) | High | 3/5 (12-15hrs) | 5/5 (8-10hrs) |
+| LTS Support (docs) | High | 5/5 | 3/5 |
+| **Weighted Total** | | **3.5/5** | **4.0/5** ✅
+
+**Spike Conclusion**: Option 3 (7.x) shows better compatibility with .NET 8 despite shorter LTS.
+```
+
+**Commit Message**: `docs: Add ADR #### spike validation results for Options 2 and 3`
+
+**Stakeholder Review Period**:
+- Share ADR with spike results
+- Wait 24-48 hours for feedback
+- Address questions/concerns
+- Do NOT proceed to Stage 4 without review
 
 ---
 
@@ -189,7 +340,7 @@ Based on evaluation, **Option 3** appears most favorable:
 **Decision pending stakeholder review and final approval.**
 ```
 
-**Commit Message**: `docs: Complete ADR-XXXX evaluation matrix and preliminary recommendation`
+**Commit Message**: `docs: Complete ADR #### evaluation matrix and preliminary recommendation`
 
 ---
 
@@ -253,13 +404,13 @@ Chosen option: "**Option 3: [Name]**", because:
 **HISTORY.md Entry** (MANDATORY):
 ```bash
 ./scripts/append-to-history.sh \
-  "Architecture: ADR-XXXX [Decision Title] - Accepted" \
+  "Architecture: ADR #### [Decision Title] - Accepted" \
   "Decided on Option 3 ([Name]) after evaluating 4 alternatives. Evaluation matrix: Option 3 scored 4.5/5 (highest). Decision drivers: performance, maintainability, community support. Trade-offs: higher migration cost (12-16 hours) acceptable for long-term benefits. Implementation plan defined." \
   "Establish architectural direction for [problem area]. Ensure decision is well-researched (4 alternatives evaluated), documented (MADR 3.0.0 format), and justified (evaluation matrix with weighted scores). Provide clear implementation guidance." \
   "Architectural decision documented and approved. Implementation can proceed per plan. Migration guide required (breaking changes for users). Option 2 deprecated. Estimated 12-16 hour effort. Positive: +15-20% performance, better maintainability. Negative: migration effort, learning curve."
 ```
 
-**Commit Message**: `docs: Accept ADR-XXXX - [Decision Title] (Option 3 selected)`
+**Commit Message**: `docs: Accept ADR #### - [Decision Title] (Option 3 selected)`
 
 ---
 
@@ -306,7 +457,7 @@ Completed: YYYY-MM-DD
 - [Lesson 2]
 ```
 
-**Commit Message**: `docs: Update ADR-XXXX with implementation notes and lessons learned`
+**Commit Message**: `docs: Update ADR #### with implementation notes and lessons learned`
 
 ---
 
@@ -383,13 +534,13 @@ Rationale: [Explanation]
 **HISTORY.md Entry**:
 ```bash
 ./scripts/append-to-history.sh \
-  "Architecture: ADR-XXXX Post-Implementation Review - Success" \
-  "Reviewed ADR-XXXX ([Decision Title]) 3 months post-implementation. Outcomes: Performance +18% (predicted +15-20% ✅), migration effort 14h (predicted 12-16h ✅), bug rate -40% (predicted -20% ✅ EXCEEDED), team satisfaction 8.5/10 (target >7/10 ✅). All success criteria met or exceeded. Unexpected benefits: [list]. Unexpected challenges: [list]. Would decide same again: YES." \
+  "Architecture: ADR #### Post-Implementation Review - Success" \
+  "Reviewed ADR #### ([Decision Title]) 3 months post-implementation. Outcomes: Performance +18% (predicted +15-20% ✅), migration effort 14h (predicted 12-16h ✅), bug rate -40% (predicted -20% ✅ EXCEEDED), team satisfaction 8.5/10 (target >7/10 ✅). All success criteria met or exceeded. Unexpected benefits: [list]. Unexpected challenges: [list]. Would decide same again: YES." \
   "Validate architectural decision outcomes and learn from implementation experience. Ensure predictions were accurate and decision was sound. Inform future similar decisions." \
-  "ADR-XXXX validated as successful decision. Predictions accurate. Exceeded expectations on maintainability. Lessons learned documented for future decisions. Follow-up: [any recommendations]."
+  "ADR #### validated as successful decision. Predictions accurate. Exceeded expectations on maintainability. Lessons learned documented for future decisions. Follow-up: [any recommendations]."
 ```
 
-**Commit Message**: `docs: Add ADR-XXXX post-implementation review (successful, all criteria met)`
+**Commit Message**: `docs: Add ADR #### post-implementation review (successful, all criteria met)`
 
 ---
 
@@ -446,7 +597,7 @@ This ADR documents a decision that was **correct at the time** (2025-10-12) but 
 **Original decision rationale remains valid for historical context.**
 ```
 
-**Commit Message**: `docs: Supersede ADR-XXXX (replaced by ADR-YYYY - [new approach])`
+**Commit Message**: `docs: Supersede ADR #### (replaced by ADR-YYYY - [new approach])`
 
 ---
 
@@ -575,14 +726,14 @@ Before marking ADR work "complete", verify:
 **Day 1 Morning**: Problem identified
 ```bash
 # Commit 1
-git add docs/ADR/ADR-0042-quick-decision.md
+git add docs/ADR/ADR 0042 quick-decision.md
 git commit -m "docs: Create ADR-0042 for quick decision (status: proposed)"
 ```
 
 **Day 1 Afternoon**: Research done, decision made
 ```bash
 # Commit 2
-git add docs/ADR/ADR-0042-quick-decision.md
+git add docs/ADR/ADR 0042 quick-decision.md
 git commit -m "docs: Complete ADR-0042 research and accept decision (Option 2 selected)"
 
 # Log to HISTORY.md

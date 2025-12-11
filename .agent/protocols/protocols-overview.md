@@ -1,3 +1,8 @@
+---
+name: protocols-overview
+description: Overview of all agent protocols with quick start guide and integration patterns
+---
+
 # Generic Agent Protocols for .NET Projects
 
 **Version**: 1.0
@@ -159,6 +164,60 @@ This directory contains **universal agent protocol templates** designed to work 
 **Customization needed**: Minimal - comprehensive protocol covering all documentation needs
 
 **Key Principle**: This protocol **integrates** the ADR lifecycle and logging protocols into a unified documentation strategy. Use this as the primary reference, with ADR-LIFECYCLE-PROTOCOL.md and GENERIC-AGENT-LOGGING-PROTOCOL.md as detailed specifications for those specific areas.
+
+---
+
+## Model Selection Guide (Opus 4.5)
+
+When spawning agents via Claude Code's Task tool, use the `model` parameter to optimize for task complexity and cost:
+
+### Quick Reference
+
+| Agent | Default | Use Opus When | Use Haiku When |
+|-------|---------|---------------|----------------|
+| **Architect** | Opus | ADRs, technology evaluation, risk assessment | Formatting, index updates |
+| **Migration Coordinator** | Opus | Planning, GO/NO-GO, complex coordination | Status updates, simple validations |
+| **Security** | Sonnet | Novel vulnerabilities, architecture decisions | Report formatting, simple configs |
+| **Coder** | Sonnet | Complex refactoring, novel API migrations | Find-and-replace, boilerplate |
+| **Tester** | Sonnet | Complex failure diagnosis, GO/NO-GO escalations | Simple test runs, result formatting |
+| **Documentation** | Sonnet | Migration guides, architecture docs | Formatting, simple updates |
+
+### Model Capabilities
+
+**Opus (model="opus")**
+- Best for: Complex reasoning, architectural decisions, trade-off analysis
+- Use when: Multiple factors, novel problems, strategic decisions
+- Cost: Higher, but worth it for complex tasks
+
+**Sonnet (model="sonnet")**
+- Best for: Standard implementation work, routine operations
+- Use when: Well-understood tasks, documented patterns
+- Cost: Balanced quality and cost for most work
+
+**Haiku (model="haiku")**
+- Best for: Simple transformations, formatting, boilerplate
+- Use when: Mechanical tasks, no judgment required
+- Cost: Lowest, ideal for high-volume simple tasks
+
+### Example Usage
+
+```javascript
+// Complex architectural decision - use Opus
+Task("architect", "Evaluate messaging patterns for event-driven migration...", model="opus")
+
+// Standard implementation - use Sonnet
+Task("coder", "Update package references to .NET 9...", model="sonnet")
+
+// Simple formatting - use Haiku
+Task("documentation", "Fix markdown formatting in README...", model="haiku")
+```
+
+### Cost Optimization Strategy
+
+1. **Start with the default** for each agent type
+2. **Escalate to Opus** when encountering complexity or blockers
+3. **Drop to Haiku** for simple mechanical tasks
+4. **Track patterns** - if an agent type consistently needs Opus, update the default
 
 ---
 
@@ -328,7 +387,7 @@ All agents working on this project MUST follow these protocols:
 
 ### 4. Testing Protocol
 - **ALWAYS** run complete test suites (not partial)
-- **ALWAYS** fix and retest until pass rate ≥95%
+- **ALWAYS** fix and retest until pass rate = 100%
 - See: docs/agents/GENERIC-TESTING-PROTOCOL.md
 - Required phases: Pre-test Setup, Unit, Integration, Component, Performance, Samples
 
@@ -393,40 +452,11 @@ All agents working on this project MUST follow these protocols:
 
 **Scenario**: Automated validation in pipeline
 
-```yaml
-# .github/workflows/migration-validation.yml
-name: Migration Validation
-
-on: [push, pull_request]
-
-jobs:
-  validate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Validate HISTORY.md Updated
-        run: |
-          if ! git diff HEAD~1 docs/HISTORY.md | grep -q "^+"; then
-            echo "Error: HISTORY.md not updated"
-            exit 1
-          fi
-
-      - name: Run Test Protocol
-        run: |
-          # Follow GENERIC-TESTING-PROTOCOL.md
-          docker-compose -f docker-compose.test.yml up -d
-          dotnet test --configuration Release
-
-      - name: Validate Test Pass Rate
-        run: |
-          # Ensure ≥95% pass rate per protocol
-          PASS_RATE=$(dotnet test --logger "trx" | grep "Passed" | ...)
-          if [ $PASS_RATE -lt 95 ]; then
-            echo "Error: Pass rate $PASS_RATE% below 95% threshold"
-            exit 1
-          fi
-```
+Use GitHub Actions or your CI/CD platform to automate validation:
+- Validate HISTORY.md is updated on every commit
+- Run test protocol with 100% pass rate requirement
+- Validate documentation updates
+- Enforce quality gates before merging
 
 ---
 
@@ -597,7 +627,7 @@ These protocols are provided as templates for your use. Customize freely for you
 │ 3. TESTING (MANDATORY)                                       │
 │    Phases: Pre-test → Unit → Integration → Component        │
 │           → Performance → Samples                            │
-│    Target: ≥95% unit, ≥90% integration                      │
+│    Target: 100% (all test types)                            │
 │    Fix-and-retest until criteria met                        │
 │                                                              │
 │ 4. PLANNING (Initial Phase)                                 │
@@ -612,7 +642,7 @@ These protocols are provided as templates for your use. Customize freely for you
 │                                                              │
 │ SUCCESS CRITERIA                                             │
 │    ✅ All builds pass                                        │
-│    ✅ Tests ≥95% pass                                        │
+│    ✅ Tests 100% pass                                        │
 │    ✅ Zero P0 issues                                         │
 │    ✅ HISTORY.md updated                                     │
 │    ✅ ADRs updated at all lifecycle stages                   │

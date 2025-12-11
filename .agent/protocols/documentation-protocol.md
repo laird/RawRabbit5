@@ -1,3 +1,8 @@
+---
+name: documentation-protocol
+description: Unified documentation protocol integrating HISTORY.md, ADRs, and inline documentation
+---
+
 # Comprehensive Documentation Protocol
 
 **Version**: 1.0
@@ -120,7 +125,46 @@ ADRs are **living documents** that track architectural decisions throughout thei
 
 ### Protocol Reference
 
-**Full Protocol**: `docs/agents/agents/ADR-LIFECYCLE-PROTOCOL.md`
+**Full Protocol**: `docs/agents/ADR-LIFECYCLE-PROTOCOL.md`
+
+### ADR File Naming Convention (MANDATORY)
+
+**All ADR files MUST follow this exact naming pattern**:
+
+```
+ADR #### Title With Spaces.md
+```
+
+**Format Rules**:
+- Prefix: `ADR` (uppercase, with space after)
+- Number: Four digits with leading zeros (`0001`, `0002`, `0042`, `1234`)
+- Space after number
+- Title: Human-readable title with spaces between words (Title Case)
+- Extension: `.md`
+
+**✅ Correct Examples**:
+- `ADR 0001 Target Framework NET9.md`
+- `ADR 0002 RabbitMQ Client Upgrade.md`
+- `ADR 0015 Dependency Injection Container Selection.md`
+
+**❌ Incorrect Examples**:
+- `0001-target-framework.md` ❌ No ADR prefix, uses dashes
+- `ADR 0002 upgrade.md` ❌ Uses dashes instead of spaces
+- `ADR0003Decision.md` ❌ No spaces
+
+**Creating New ADR**:
+```bash
+# Get next ADR number
+LAST_ADR=$(ls docs/adr/ADR\ *.md | tail -1 | sed 's/.*ADR //' | sed 's/ .*//')
+NEXT_NUM=$(printf "%04d" $((10#$LAST_ADR + 1)))
+
+# Create with correct naming
+touch "docs/adr/ADR $NEXT_NUM Your Decision Title.md"
+```
+
+See `ADR-LIFECYCLE-PROTOCOL.md` for complete naming requirements.
+
+---
 
 ### ADR Lifecycle (7 Stages)
 
@@ -131,15 +175,15 @@ ADRs are **living documents** that track architectural decisions throughout thei
 **Action**: Create initial ADR
 ```bash
 # Create ADR file
-touch docs/adr/ADR-XXXX-decision-title.md
+touch docs/adr/ADR ####-decision-title.md
 
 # Commit
-git commit -m "docs: Create ADR-XXXX for [decision] (status: proposed, research starting)"
+git commit -m "docs: Create ADR #### for [decision] (status: proposed, research starting)"
 ```
 
 **ADR Content**:
 ```markdown
-# ADR-XXXX: [Decision Title]
+# ADR ####: [Decision Title]
 
 ## Status
 proposed
@@ -179,13 +223,13 @@ proposed
 **Commit Pattern**:
 ```bash
 # After researching Option 1
-git commit -m "docs: Update ADR-XXXX with Option 1 research findings"
+git commit -m "docs: Update ADR #### with Option 1 research findings"
 
 # After researching Option 2
-git commit -m "docs: Update ADR-XXXX with Option 2 research findings"
+git commit -m "docs: Update ADR #### with Option 2 research findings"
 
 # After researching Option 3
-git commit -m "docs: Update ADR-XXXX with Option 3 research findings"
+git commit -m "docs: Update ADR #### with Option 3 research findings"
 ```
 
 **ADR Updates**:
@@ -232,7 +276,7 @@ git commit -m "docs: Update ADR-XXXX with Option 3 research findings"
 
 **Commit**:
 ```bash
-git commit -m "docs: Complete ADR-XXXX evaluation matrix (preliminary recommendation: Option 3)"
+git commit -m "docs: Complete ADR #### evaluation matrix (preliminary recommendation: Option 3)"
 ```
 
 **ADR Updates**:
@@ -262,7 +306,7 @@ Based on evaluation, **Option 3** appears most favorable (4.3/5 score).
 
 **Commit**:
 ```bash
-git commit -m "docs: Accept ADR-XXXX - [Decision Title] (Option 3 selected)"
+git commit -m "docs: Accept ADR #### - [Decision Title] (Option 3 selected)"
 ```
 
 **ADR Updates**:
@@ -294,7 +338,7 @@ Chosen option: "**Option 3: [Name]**", because:
 **Log to HISTORY.md**: **MANDATORY**
 ```bash
 ./scripts/append-to-history.sh \
-  "Architecture: ADR-XXXX [Decision Title] - Accepted" \
+  "Architecture: ADR #### [Decision Title] - Accepted" \
   "Decided on Option 3 after evaluating 4 alternatives. Score: 4.3/5. Rationale: [details]." \
   "Establish architectural direction for [area]. Ensure well-researched decision." \
   "Decision documented and approved. Implementation can proceed. [Impact details]."
@@ -312,7 +356,7 @@ Chosen option: "**Option 3: [Name]**", because:
 
 **Commit**:
 ```bash
-git commit -m "docs: Update ADR-XXXX with implementation notes (challenges and resolutions)"
+git commit -m "docs: Update ADR #### with implementation notes (challenges and resolutions)"
 ```
 
 **ADR Updates**:
@@ -350,7 +394,7 @@ Completed: YYYY-MM-DD
 
 **Commit**:
 ```bash
-git commit -m "docs: Add ADR-XXXX post-implementation review (successful, criteria met)"
+git commit -m "docs: Add ADR #### post-implementation review (successful, criteria met)"
 ```
 
 **ADR Updates**:
@@ -382,8 +426,8 @@ YYYY-MM-DD (3 months post-implementation)
 **Log to HISTORY.md**: **MANDATORY**
 ```bash
 ./scripts/append-to-history.sh \
-  "Architecture: ADR-XXXX Post-Implementation Review - Success" \
-  "Reviewed ADR-XXXX 3 months post-implementation. All criteria met. Performance +18% (predicted +15-20% ✅). Effort 14h (predicted 12-16h ✅)." \
+  "Architecture: ADR #### Post-Implementation Review - Success" \
+  "Reviewed ADR #### 3 months post-implementation. All criteria met. Performance +18% (predicted +15-20% ✅). Effort 14h (predicted 12-16h ✅)." \
   "Validate architectural decision outcomes and learn from experience." \
   "Decision validated as successful. Predictions accurate. Lessons learned documented."
 ```
@@ -398,7 +442,7 @@ YYYY-MM-DD (3 months post-implementation)
 
 **Commit**:
 ```bash
-git commit -m "docs: Supersede ADR-XXXX (replaced by ADR-YYYY)"
+git commit -m "docs: Supersede ADR #### (replaced by ADR-YYYY)"
 ```
 
 **ADR Updates**:
@@ -432,9 +476,9 @@ See [ADR-YYYY](ADR-YYYY-new-approach.md)
 docs/
 ├── adr/
 │   ├── README.md (index of all ADRs)
-│   ├── ADR-0001-net8-single-target.md
-│   ├── ADR-0002-security-remediation-strategy.md
-│   ├── ADR-0003-rabbitmq-client-migration.md
+│   ├── ADR 0001 net8-single-target.md
+│   ├── ADR 0002 security-remediation-strategy.md
+│   ├── ADR 0003 rabbitmq-client-migration.md
 │   └── ...
 ```
 
@@ -784,7 +828,7 @@ Track documentation health:
 Feature: New Caching Middleware
 
 Documentation Created:
-├── docs/adr/ADR-0021-caching-strategy.md (architectural decision)
+├── docs/adr/ADR 0021 caching-strategy.md (architectural decision)
 ├── docs/HISTORY.md (3 entries: decision accepted, implementation complete, review)
 ├── src/RawRabbit.Enrichers.Caching/README.md (usage guide)
 ├── src/RawRabbit.Enrichers.Caching/CachingMiddleware.cs (XML docs + comments)

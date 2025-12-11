@@ -1,21 +1,79 @@
+---
+name: testing-protocol
+description: 6-phase testing protocol with fix-and-retest cycles, automated validation, and quality gates (100% pass rate)
+---
+
 # Generic Comprehensive Testing Protocol
 
-**Version**: 1.0
-**Purpose**: Universal testing requirements for any .NET project
+**Version**: 2.0 (UPDATED per Retrospective Recommendation 4)
+**Purpose**: Universal testing requirements for any .NET project with continuous validation
 **Applicability**: All .NET migrations, releases, and significant changes
 
 ---
 
 ## 1. Overview
 
-This protocol defines **mandatory** testing requirements for all software changes. It ensures:
+This protocol defines **mandatory** testing requirements for all software changes with **continuous testing after every stage**. It ensures:
 - ✅ Complete test execution (not partial)
-- ✅ All test failures investigated and fixed
+- ✅ Testing after every stage (not delayed until Stage 4)
+- ✅ All test failures investigated and fixed immediately
 - ✅ Re-testing after fixes to validate resolution
 - ✅ No test gaps or skipped validation
 - ✅ Production-ready quality
 
-**Core Principle**: **No shortcuts. Complete testing = Production confidence.**
+**Core Principle**: **Test continuously from Phase 0, not delayed. Catch issues immediately, not stages later.**
+
+**Key Change**: Testing is now **tiered** (Unit → Component → Integration → Performance) and executed **progressively after each stage**, not as a single late-stage activity.
+
+---
+
+## 1.5. Tiered Testing Strategy (NEW - Continuous Testing)
+
+**Problem Solved**: Prevents late discovery of critical failures by testing after every stage instead of waiting until Stage 4.
+
+### Testing Tiers
+
+**Tier 1: Unit Tests** (Fast, <2 minutes)
+- **When**: After Stage 0 (baseline), Stage 1 (Security), Stage 2 (Architecture), Stage 3 (Framework)
+- **What**: API compatibility, configuration, basic functionality
+- **Pass Criteria**: 100% of existing unit tests must still pass
+- **Benefit**: Immediate feedback on breaking changes
+
+**Tier 2: Component Tests** (Moderate, 5-10 minutes)
+- **When**: After Stage 3 (Framework), Stage 4 (API Modernization)
+- **What**: Module integration, recovery scenarios, error handling
+- **Pass Criteria**: 100% pass OR new failures documented with fix plan
+- **Benefit**: Validates module interactions work correctly
+
+**Tier 3: Integration Tests** (Slow, 15-30 minutes)
+- **When**: After Stage 4 (API Modernization), Stage 6 (Integration & Testing)
+- **What**: End-to-end workflows, real external dependencies (RabbitMQ, databases)
+- **Pass Criteria**: 100% pass before Stage 7 (Documentation)
+- **Benefit**: Validates complete system behavior
+
+**Tier 4: Performance Tests** (Slowest, 30-60 minutes)
+- **When**: Stage 5 (Performance), Stage 6 (Final Testing)
+- **What**: Throughput, latency, memory usage, no regressions
+- **Pass Criteria**: Performance within ±10% of baseline
+- **Benefit**: Ensures modernization doesn't degrade performance
+
+### Stage-by-Stage Testing Requirements
+
+| Stage | Tests Required | Pass Criteria | Time Budget |
+|-------|----------------|---------------|-------------|
+| Stage 0 (Discovery) | Baseline run (all tiers) | Document pass rate | 10 min |
+| Stage 1 (Security) | Tier 1 (Unit) | 100% of baseline | 5 min |
+| Stage 2 (Architecture) | Tier 1 (Unit) | 100% maintained | 5 min |
+| Stage 3 (Framework) | Tier 1 + Tier 2 | 100% unit, 90% component | 15 min |
+| Stage 4 (API Modernization) | Tier 1 + Tier 2 + Tier 3 | 100% all tiers | 45 min |
+| Stage 5 (Performance) | Tier 1 + Tier 4 | 100% unit, perf ±10% | 60 min |
+| Stage 6 (Integration) | All tiers | 100% all tiers | 90 min |
+| Stage 7 (Documentation) | Tier 1 + Tier 3 (smoke) | 100% pass | 20 min |
+| Stage 8 (Release) | All tiers (final) | 100% all tiers | 90 min |
+
+**Total Testing Time**: ~6 hours distributed across stages (vs. 3+ hours concentrated at end)
+
+**Key Benefit**: Issues discovered in Stage 1 (minutes after change) instead of Stage 4 (days later).
 
 ---
 
@@ -414,9 +472,9 @@ cd ../..
 
 **Requirements**:
 - Unit tests: 100% pass rate (MANDATORY even for beta)
-- Integration tests: ≥95% pass rate (exceptional cases only)
+- Integration tests: 100% pass rate (MANDATORY even for beta)
 - Performance tests: Build successful
-- Sample apps: At least 90% run successfully
+- Sample apps: 100% run successfully
 - Code coverage: ≥75%
 - Zero P0 issues
 - Zero P1 issues
@@ -432,7 +490,7 @@ cd ../..
 
 **Criteria**:
 - Unit tests: <100% pass rate
-- Integration tests: <95% pass rate
+- Integration tests: <100% pass rate
 - Any P0 issues unresolved
 - Any P1 issues unresolved
 - Core functionality broken
@@ -452,52 +510,13 @@ cd ../..
 
 **External Dependencies** (customize for your project):
 
-```yaml
-# docker-compose.test.yml
-version: '3.8'
+Use docker-compose or equivalent to set up test dependencies:
+- **Database**: PostgreSQL, MySQL, or your database of choice
+- **Message Broker**: RabbitMQ, Kafka, or equivalent
+- **Cache**: Redis or Memcached
+- **Other Services**: API mocks, storage emulators, etc.
 
-services:
-  # Database (example: PostgreSQL)
-  database:
-    image: postgres:16
-    environment:
-      POSTGRES_USER: testuser
-      POSTGRES_PASSWORD: testpass
-      POSTGRES_DB: testdb
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U testuser"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Message Broker (example: RabbitMQ)
-  messagebroker:
-    image: rabbitmq:3-management
-    environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Cache (example: Redis)
-  cache:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-```
+Ensure all services have proper health checks and are ready before running tests.
 
 ### Setup Script Template
 
@@ -577,7 +596,7 @@ echo "✅ Test environment cleaned"
 
 4. **Accepting Low Pass Rates**:
    - ❌ "80% is good enough for now"
-   - ✅ Target ≥95%, investigate all failures
+   - ✅ Target 100%, investigate all failures
 
 5. **Not Documenting Failures**:
    - ❌ "Some tests failed, moving on"
@@ -676,56 +695,12 @@ echo "✅ Test environment cleaned"
 
 ### Integration with CI/CD
 
-```yaml
-# Example: GitHub Actions
-name: Comprehensive Testing
-
-on: [push, pull_request]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: testuser
-          POSTGRES_PASSWORD: testpass
-        ports:
-          - 5432:5432
-
-      rabbitmq:
-        image: rabbitmq:3-management
-        ports:
-          - 5672:5672
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '9.0.x'
-
-      - name: Restore dependencies
-        run: dotnet restore
-
-      - name: Build
-        run: dotnet build --configuration Release --no-restore
-
-      - name: Unit Tests
-        run: dotnet test --filter "Category=Unit" --logger "trx" --collect:"XPlat Code Coverage"
-
-      - name: Integration Tests
-        run: dotnet test --filter "Category=Integration" --logger "trx"
-
-      - name: Upload Test Results
-        uses: actions/upload-artifact@v3
-        with:
-          name: test-results
-          path: '**/TestResults/*.trx'
-```
+Integrate the testing protocol with your CI/CD pipeline (GitHub Actions, GitLab CI, Jenkins, etc.):
+- Run all test phases on every commit
+- Enforce 100% pass rate requirement
+- Upload test results and code coverage reports
+- Block merges if tests fail or coverage drops
+- Set up test infrastructure services (database, cache, etc.)
 
 ---
 

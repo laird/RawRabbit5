@@ -1,3 +1,8 @@
+---
+name: documentation-plan
+description: Documentation strategy template for migrations with CHANGELOG, guides, and effort estimates
+---
+
 # Generic .NET Project Documentation Plan Template
 
 **Version**: 1.0
@@ -336,10 +341,10 @@ dotnet test --filter Category=Integration
 
 **ADR Template** (based on Michael Nygard's format):
 ```markdown
-# ADR-XXXX: [Title]
+# ADR ####: [Title]
 
 **Date**: YYYY-MM-DD
-**Status**: [Proposed | Accepted | Deprecated | Superseded by ADR-XXXX]
+**Status**: [Proposed | Accepted | Deprecated | Superseded by ADR ####]
 **Deciders**: [List of people involved]
 **Context Tag**: [Migration | Security | Performance | API Design]
 

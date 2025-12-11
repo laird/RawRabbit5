@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using RabbitMQ.Client.Events;
 using RawRabbit.Configuration.BasicPublish;
 using RawRabbit.Configuration.Exchange;

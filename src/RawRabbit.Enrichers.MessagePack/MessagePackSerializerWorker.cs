@@ -9,23 +9,18 @@ namespace RawRabbit.Enrichers.MessagePack
 	internal class MessagePackSerializerWorker : ISerializer
 	{
 		public string ContentType => "application/x-messagepack";
-		private readonly MethodInfo _deserializeType;
-		private readonly MethodInfo _serializeType;
+		private readonly MessagePackSerializerOptions _options;
 
 		public MessagePackSerializerWorker(MessagePackFormat format)
 		{
-			Type tp;
-
 			if (format == MessagePackFormat.LZ4Compression)
-				tp = typeof(LZ4MessagePackSerializer);
+			{
+				_options = MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.Lz4Block);
+			}
 			else
-				tp = typeof(MessagePackSerializer);
-
-			_deserializeType = tp
-				.GetMethod(nameof(MessagePackSerializer.Deserialize), new[] { typeof(byte[]) });
-			_serializeType = tp
-				.GetMethods()
-				.FirstOrDefault(s => s.Name == nameof(MessagePackSerializer.Serialize) && s.ReturnType == typeof(byte[]));
+			{
+				_options = MessagePackSerializerOptions.Standard;
+			}
 		}
 
 		public byte[] Serialize(object obj)
@@ -33,20 +28,17 @@ namespace RawRabbit.Enrichers.MessagePack
 			if (obj == null)
 				throw new ArgumentNullException();
 
-			return (byte[])_serializeType
-				.MakeGenericMethod(obj.GetType())
-				.Invoke(null, new[] { obj });
+			return MessagePackSerializer.Serialize(obj.GetType(), obj, _options);
 		}
 
 		public object Deserialize(Type type, byte[] bytes)
 		{
-			return _deserializeType.MakeGenericMethod(type)
-				.Invoke(null, new object[] { bytes });
+			return MessagePackSerializer.Deserialize(type, bytes, _options);
 		}
 
 		public TType Deserialize<TType>(byte[] bytes)
 		{
-			return MessagePackSerializer.Deserialize<TType>(bytes);
+			return MessagePackSerializer.Deserialize<TType>(bytes, _options);
 		}
 	}
 }

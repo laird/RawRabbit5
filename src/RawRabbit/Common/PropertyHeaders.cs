@@ -1,4 +1,4 @@
-﻿namespace RawRabbit.Common
+namespace RawRabbit.Common
 {
 	public class PropertyHeaders
 	{

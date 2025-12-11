@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using RabbitMQ.Client;
@@ -7,14 +7,14 @@ namespace RawRabbit.Pipe.Middleware
 {
 	public class ExchangeDeleteOptions
 	{
-		public Func<IPipeContext, IModel> ChannelFunc { get; set; }
+		public Func<IPipeContext, IChannel> ChannelFunc { get; set; }
 		public Func<IPipeContext, string> ExchangeNameFunc { get; set; }
 		public Func<IPipeContext, bool> IfUsedFunc { get; set; }
 	}
 
 	public class ExchangeDeleteMiddleware : Middleware
 	{
-		protected Func<IPipeContext, IModel> ChannelFunc;
+		protected Func<IPipeContext, IChannel> ChannelFunc;
 		protected Func<IPipeContext, string> ExchangeNameFunc;
 		protected Func<IPipeContext, bool> IfUsedFunc;
 
@@ -34,12 +34,12 @@ namespace RawRabbit.Pipe.Middleware
 			await Next.InvokeAsync(context, token);
 		}
 
-		protected virtual void DeleteEchange(IModel channel, string exchangeName, bool ifUsed)
+		protected virtual void DeleteEchange(IChannel channel, string exchangeName, bool ifUsed)
 		{
-			channel.ExchangeDelete(exchangeName, ifUsed);
+			channel.ExchangeDeleteAsync(exchangeName, ifUsed);
 		}
 
-		protected virtual IModel GetChannel(IPipeContext context)
+		protected virtual IChannel GetChannel(IPipeContext context)
 		{
 			return ChannelFunc?.Invoke(context);
 		}
@@ -55,3 +55,4 @@ namespace RawRabbit.Pipe.Middleware
 		}
 	}
 }
+

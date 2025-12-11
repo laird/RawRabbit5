@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,21 +13,21 @@ namespace RawRabbit.Consumer
 	public class ConsumerFactory : IConsumerFactory
 	{
 		private readonly IChannelFactory _channelFactory;
-		private readonly ConcurrentDictionary<string, Lazy<Task<IBasicConsumer>>> _consumerCache;
+		private readonly ConcurrentDictionary<string, Lazy<Task<IAsyncBasicConsumer>>> _consumerCache;
 		private readonly ILog _logger = LogProvider.For<ConsumerFactory>();
 
 		public ConsumerFactory(IChannelFactory channelFactory)
 		{
-			_consumerCache = new ConcurrentDictionary<string, Lazy<Task<IBasicConsumer>>>();
+			_consumerCache = new ConcurrentDictionary<string, Lazy<Task<IAsyncBasicConsumer>>>();
 			_channelFactory = channelFactory;
 		}
 
-		public Task<IBasicConsumer> GetConsumerAsync(ConsumeConfiguration cfg, IModel channel = null, CancellationToken token = default(CancellationToken))
+		public Task<IAsyncBasicConsumer> GetConsumerAsync(ConsumeConfiguration cfg, IChannel channel = null, CancellationToken token = default(CancellationToken))
 		{
 			var consumerKey = CreateConsumerKey(cfg);
 			var lazyConsumerTask = _consumerCache.GetOrAdd(consumerKey, routingKey =>
 			{
-				return new Lazy<Task<IBasicConsumer>>(async () =>
+				return new Lazy<Task<IAsyncBasicConsumer>>(async () =>
 				{
 					var consumer = await CreateConsumerAsync(channel, token);
 					return consumer;
@@ -36,19 +36,19 @@ namespace RawRabbit.Consumer
 			return lazyConsumerTask.Value;
 		}
 
-		public Task<IBasicConsumer> GetConfiguredConsumerAsync(ConsumeConfiguration cfg, IModel channel = null, CancellationToken token = default(CancellationToken))
+		public Task<IAsyncBasicConsumer> GetConfiguredConsumerAsync(ConsumeConfiguration cfg, IChannel channel = null, CancellationToken token = default(CancellationToken))
 		{
 			var consumerKey = CreateConsumerKey(cfg);
 			var lazyConsumerTask = _consumerCache.GetOrAdd(consumerKey, routingKey =>
 			{
-				return new Lazy<Task<IBasicConsumer>>(async () =>
+				return new Lazy<Task<IAsyncBasicConsumer>>(async () =>
 				{
 					var consumer = await CreateConsumerAsync(channel, token);
 					ConfigureConsume(consumer, cfg);
 					return consumer;
 				});
 			});
-			if (lazyConsumerTask.Value.IsCompleted && lazyConsumerTask.Value.Result.Model.IsClosed)
+			if (lazyConsumerTask.Value.IsCompleted && !((RawRabbitConsumer)lazyConsumerTask.Value.Result).Channel.IsOpen)
 			{
 				_consumerCache.TryRemove(consumerKey, out _);
 				return GetConsumerAsync(cfg, channel, token);
@@ -56,39 +56,41 @@ namespace RawRabbit.Consumer
 			return lazyConsumerTask.Value;
 		}
 
-		public async Task<IBasicConsumer> CreateConsumerAsync(IModel channel = null, CancellationToken token = default(CancellationToken))
+		public async Task<IAsyncBasicConsumer> CreateConsumerAsync(IChannel channel = null, CancellationToken token = default(CancellationToken))
 		{
 			if (channel == null)
 			{
 				channel = await GetOrCreateChannelAsync(token);
 			}
-			return new EventingBasicConsumer(channel);
+			return new RawRabbitConsumer(channel);
 		}
 
-		public IBasicConsumer ConfigureConsume(IBasicConsumer consumer, ConsumeConfiguration cfg)
+		public IAsyncBasicConsumer ConfigureConsume(IAsyncBasicConsumer consumer, ConsumeConfiguration cfg)
 		{
 			CheckPropertyValues(cfg);
 
 			if (cfg.PrefetchCount > 0)
 			{
 				_logger.Info("Setting Prefetch Count to {prefetchCount}.", cfg.PrefetchCount);
-				consumer.Model.BasicQos(
+				((AsyncEventingBasicConsumer)consumer).Channel.BasicQosAsync(
 					prefetchSize: 0,
 					prefetchCount: cfg.PrefetchCount,
 					global: false
-				);
+				).GetAwaiter().GetResult();
 			}
 
 			_logger.Info("Preparing to consume message from queue '{queueName}'.", cfg.QueueName);
 
-			consumer.Model.BasicConsume(
+			var tag = ((RawRabbitConsumer)consumer).Channel.BasicConsumeAsync(
 				queue: cfg.QueueName,
 				autoAck: cfg.AutoAck,
 				consumerTag: cfg.ConsumerTag,
 				noLocal: cfg.NoLocal,
 				exclusive: cfg.Exclusive,
 				arguments: cfg.Arguments,
-				consumer: consumer);
+				consumer: consumer).GetAwaiter().GetResult();
+            
+            ((RawRabbitConsumer)consumer).ConsumerTag = tag;
 			return consumer;
 		}
 
@@ -108,7 +110,7 @@ namespace RawRabbit.Consumer
 			}
 		}
 
-		protected virtual Task<IModel> GetOrCreateChannelAsync(CancellationToken token = default(CancellationToken))
+		protected virtual Task<IChannel> GetOrCreateChannelAsync(CancellationToken token = default(CancellationToken))
 		{
 			_logger.Info("Creating a dedicated channel for consumer.");
 			return _channelFactory.CreateChannelAsync(token);
@@ -122,52 +124,66 @@ namespace RawRabbit.Consumer
 
 	public static class ConsumerExtensions
 	{
-		public static Task<string> CancelAsync(this IBasicConsumer consumer, CancellationToken token = default(CancellationToken))
+		public static Task<string> CancelAsync(this IAsyncBasicConsumer consumer, CancellationToken token = default(CancellationToken))
 		{
-			var eventConsumer = consumer as EventingBasicConsumer;
+			var eventConsumer = consumer as RawRabbitConsumer;
 			if (eventConsumer == null)
 			{
-				throw new NotSupportedException("Can only cancellation EventBasicConsumer");
+				throw new NotSupportedException("Only supported for RawRabbitConsumer");
 			}
 			var cancelTcs = new TaskCompletionSource<string>();
 			token.Register(() => cancelTcs.TrySetCanceled());
 			var tag = eventConsumer.ConsumerTag;
-			consumer.ConsumerCancelled += (sender, args) =>
+			eventConsumer.ConsumerCancelledAsync += (sender, args) =>
 			{
-				if (args.ConsumerTag != tag)
+				if (args.ConsumerTags.Contains(tag))
 				{
-					return;
+				    cancelTcs.TrySetResult(tag);
 				}
-				cancelTcs.TrySetResult(args.ConsumerTag);
+                return Task.CompletedTask;
 			};
-			consumer.Model.BasicCancel(eventConsumer.ConsumerTag);
+			((RawRabbitConsumer)consumer).Channel.BasicCancelAsync(eventConsumer.ConsumerTag);
 			return cancelTcs.Task;
 		}
 
-		public static void OnMessage(this IBasicConsumer consumer, EventHandler<BasicDeliverEventArgs> onMessage, Predicate<BasicDeliverEventArgs> abort = null)
+		public static void OnMessage(this IAsyncBasicConsumer consumer, EventHandler<BasicDeliverEventArgs> onMessage, Predicate<BasicDeliverEventArgs> abort = null)
 		{
-			var eventConsumer = consumer as EventingBasicConsumer;
+			var eventConsumer = consumer as RawRabbitConsumer;
 			if (eventConsumer == null)
 			{
-				throw new NotSupportedException("Only supported for EventBasicConsumer");
+				throw new NotSupportedException("Only supported for RawRabbitConsumer");
 			}
-			eventConsumer.Received += onMessage;
-
-			if (abort == null)
-			{
-				return;
-			}
-
-			EventHandler<BasicDeliverEventArgs> abortHandler = null;
-			abortHandler = (sender, args) =>
-			{
-				if (abort(args))
-				{
-					eventConsumer.Received -= onMessage;
-					eventConsumer.Received -= abortHandler;
-				}
-			};
-			eventConsumer.Received += abortHandler;
+			AsyncEventHandler<BasicDeliverEventArgs> handler = null;
+            handler = (sender, args) => 
+            {
+                onMessage(sender, args);
+                if (abort != null && abort(args))
+                {
+                    eventConsumer.ReceivedAsync -= handler;
+                }
+                				return Task.CompletedTask;
+            };
+            eventConsumer.ReceivedAsync += handler;
 		}
+	}
+
+	public class RawRabbitConsumer : AsyncEventingBasicConsumer
+	{
+		public RawRabbitConsumer(IChannel channel) : base(channel)
+		{
+		}
+
+		public string ConsumerTag { get; set; }
+        
+        public event AsyncEventHandler<ConsumerEventArgs> ConsumerCancelledAsync;
+
+        protected override async Task OnCancelAsync(string[] consumerTags, CancellationToken cancellationToken)
+        {
+            await base.OnCancelAsync(consumerTags, cancellationToken);
+            if (ConsumerCancelledAsync != null) 
+            {
+                 await ConsumerCancelledAsync(this, new ConsumerEventArgs(consumerTags));
+            }
+        }
 	}
 }

@@ -10,7 +10,7 @@ namespace RawRabbit.Operations.Get.Middleware
 	public class AckableResultOptions<TResult>
 	{
 		public Func<IPipeContext, TResult> ContentFunc { get; set; }
-		public Func<IPipeContext, IModel> ChannelFunc { get; internal set; }
+		public Func<IPipeContext, IChannel> ChannelFunc { get; internal set; }
 		public Func<IPipeContext, ulong> DeliveryTagFunc { get; internal set; }
 		public Action<IPipeContext, Ackable<TResult>> PostExecutionAction { get; internal set; }
 	}
@@ -26,7 +26,7 @@ namespace RawRabbit.Operations.Get.Middleware
 	public class AckableResultMiddleware<TResult> : Pipe.Middleware.Middleware
 	{
 		protected Func<IPipeContext, TResult> GetResultFunc;
-		protected Func<IPipeContext, IModel> ChannelFunc;
+		protected Func<IPipeContext, IChannel> ChannelFunc;
 		protected Action<IPipeContext, Ackable<TResult>> PostExecutionAction;
 		protected Func<IPipeContext, ulong> DeliveryTagFunc;
 
@@ -54,12 +54,12 @@ namespace RawRabbit.Operations.Get.Middleware
 			return DeliveryTagFunc(context);
 		}
 
-		protected virtual Ackable<TResult> CreateAckableResult(IModel channel, TResult result, ulong deliveryTag)
+		protected virtual Ackable<TResult> CreateAckableResult(IChannel channel, TResult result, ulong deliveryTag)
 		{
 			return new Ackable<TResult>(result, channel, deliveryTag);
 		}
 
-		protected virtual IModel GetChannel(IPipeContext context)
+		protected virtual IChannel GetChannel(IPipeContext context)
 		{
 			return ChannelFunc(context);
 		}

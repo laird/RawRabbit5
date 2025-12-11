@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using RabbitMQ.Client;
@@ -9,14 +9,14 @@ namespace RawRabbit.Pipe.Middleware
 	public class PooledChannelOptions
 	{
 		public Func<IPipeContext, string> PoolNameFunc { get; set; }
-		public Action<IPipeContext, IModel> SaveInContextAction { get; set; }
+		public Action<IPipeContext, IChannel> SaveInContextAction { get; set; }
 	}
 
 	public class PooledChannelMiddleware : Middleware
 	{
 		protected readonly IChannelPoolFactory PoolFactory;
 		protected readonly Func<IPipeContext, string> PoolNameFunc;
-		protected readonly Action<IPipeContext, IModel> SaveInContextAction;
+		protected readonly Action<IPipeContext, IChannel> SaveInContextAction;
 
 		public PooledChannelMiddleware(IChannelPoolFactory poolFactory, PooledChannelOptions options = null)
 		{
@@ -43,13 +43,13 @@ namespace RawRabbit.Pipe.Middleware
 			return PoolFactory.GetChannelPool(poolName);
 		}
 
-		protected virtual Task<IModel> GetChannelAsync(IPipeContext context, CancellationToken ct)
+		protected virtual Task<IChannel> GetChannelAsync(IPipeContext context, CancellationToken ct)
 		{
 			var channelPool = GetChannelPool(context);
 			return channelPool.GetAsync(ct);
 		}
 
-		protected virtual void SaveInContext(IPipeContext context, IModel channel)
+		protected virtual void SaveInContext(IPipeContext context, IChannel channel)
 		{
 			SaveInContextAction?.Invoke(context, channel);
 		}

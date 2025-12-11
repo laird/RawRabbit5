@@ -7,13 +7,13 @@ using RawRabbit.Configuration.Exchange;
 using RawRabbit.Logging;
 using RawRabbit.Pipe;
 using RawRabbit.Pipe.Middleware;
-using IModel = RabbitMQ.Client.IModel;
+using IChannel = RabbitMQ.Client.IChannel;
 
 namespace RawRabbit.Operations.Subscribe.Middleware
 {
 	public class SubscriptionExceptionOptions
 	{
-		public Func<IPipeContext, IChannelFactory, Task<IModel>> ChannelFunc { get; set; }
+		public Func<IPipeContext, IChannelFactory, Task<IChannel>> ChannelFunc { get; set; }
 		public Action<IPipeBuilder> InnerPipe { get; set; }
 	}
 
@@ -23,7 +23,7 @@ namespace RawRabbit.Operations.Subscribe.Middleware
 		private readonly ITopologyProvider _provider;
 		private readonly INamingConventions _conventions;
 		private readonly ILog _logger = LogProvider.For<SubscriptionExceptionMiddleware>();
-		protected Func<IPipeContext, IChannelFactory, Task<IModel>> ChannelFunc;
+		protected Func<IPipeContext, IChannelFactory, Task<IChannel>> ChannelFunc;
 
 		public SubscriptionExceptionMiddleware(
 			IPipeBuilderFactory factory,
@@ -64,7 +64,7 @@ namespace RawRabbit.Operations.Subscribe.Middleware
 			}
 		}
 
-		protected virtual Task<IModel> GetChannelAsync(IPipeContext context)
+		protected virtual Task<IChannel> GetChannelAsync(IPipeContext context)
 		{
 			return ChannelFunc(context, _channelFactory);
 		}
@@ -83,42 +83,40 @@ namespace RawRabbit.Operations.Subscribe.Middleware
 			};
 		}
 
-		protected virtual Task PublishToErrorExchangeAsync(IPipeContext context, IModel channel, Exception exception, ExchangeDeclaration exchange)
+		protected virtual async Task PublishToErrorExchangeAsync(IPipeContext context, IChannel channel, Exception exception, ExchangeDeclaration exchange)
 		{
 			var args = context.GetDeliveryEventArgs();
 			args.BasicProperties.Headers?.TryAdd(PropertyHeaders.Host, Environment.MachineName);
 			args.BasicProperties.Headers?.TryAdd(PropertyHeaders.ExceptionType, exception.GetType().Name);
 			args.BasicProperties.Headers?.TryAdd(PropertyHeaders.ExceptionStackTrace, exception.StackTrace);
-			channel.BasicPublish(exchange.Name, args.RoutingKey, false, args.BasicProperties, args.Body);
-			return Task.FromResult(0);
+			await channel.BasicPublishAsync(exchange.Name, args.RoutingKey, false, (RabbitMQ.Client.BasicProperties)args.BasicProperties, args.Body);
 		}
 
-		protected virtual Task AckMessageIfApplicable(IPipeContext context)
+		protected virtual async Task AckMessageIfApplicable(IPipeContext context)
 		{
 			var autoAck = context.GetConsumeConfiguration()?.AutoAck;
 			if (!autoAck.HasValue)
 			{
 				_logger.Debug("Unable to ack original message. Can not determen if AutoAck is configured.");
-				return Task.FromResult(0);
+				return;
 			}
 			if (autoAck.Value)
 			{
 				_logger.Debug("Consuming in AutoAck mode. No ack'ing will be performed");
-				return Task.FromResult(0);
+				return;
 			}
 			var deliveryTag = context.GetDeliveryEventArgs()?.DeliveryTag;
 			if (deliveryTag == null)
 			{
 				_logger.Info("Unable to ack original message. Delivery tag not found.");
-				return Task.FromResult(0);
+				return;
 			}
-			var consumerChannel = context.GetConsumer()?.Model;
+			var consumerChannel = context.GetConsumer()?.Channel;
 			if (consumerChannel != null && consumerChannel.IsOpen && deliveryTag.HasValue)
 			{
 				_logger.Debug("Acking message with {deliveryTag} on channel {channelNumber}", deliveryTag, consumerChannel.ChannelNumber);
-				consumerChannel.BasicAck(deliveryTag.Value, false);
+				await consumerChannel.BasicAckAsync(deliveryTag.Value, false);
 			}
-			return Task.FromResult(0);
 		}
 	}
 }

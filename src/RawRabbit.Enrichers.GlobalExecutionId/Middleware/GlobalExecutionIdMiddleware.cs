@@ -33,7 +33,7 @@ namespace RawRabbit.Enrichers.GlobalExecutionId.Middleware
 		public GlobalExecutionIdMiddleware(GlobalExecutionOptions options = null)
 		{
 			IdFunc = options?.IdFunc ?? (context => context.GetGlobalExecutionId());
-			PersistAction = options?.PersistAction ?? ((context, id) => context.Properties.TryAdd(PipeKey.GlobalExecutionId, id));
+			PersistAction = options?.PersistAction ?? ((Action<IPipeContext, string>)((context, id) => context.Properties.TryAdd(PipeKey.GlobalExecutionId, id)));
 		}
 
 		public override Task InvokeAsync(IPipeContext context, CancellationToken token)

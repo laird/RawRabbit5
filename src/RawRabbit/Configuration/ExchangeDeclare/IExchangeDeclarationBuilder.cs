@@ -1,4 +1,4 @@
-﻿namespace RawRabbit.Configuration.Exchange
+namespace RawRabbit.Configuration.Exchange
 {
 	public interface IExchangeDeclarationBuilder
 	{

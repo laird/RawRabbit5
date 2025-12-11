@@ -1,4 +1,4 @@
-﻿namespace RawRabbit.Configuration.Get
+namespace RawRabbit.Configuration.Get
 {
 	public class GetConfiguration
 	{

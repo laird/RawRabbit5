@@ -1,4 +1,4 @@
-﻿namespace RawRabbit.Pipe
+namespace RawRabbit.Pipe
 {
 	public static class StageMarker
 	{

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -11,22 +11,22 @@ namespace RawRabbit.Channel
 {
 	public interface IChannelPool
 	{
-		Task<IModel> GetAsync(CancellationToken ct = default(CancellationToken));
+		Task<IChannel> GetAsync(CancellationToken ct = default(CancellationToken));
 	}
 
 	public class StaticChannelPool : IDisposable, IChannelPool
 	{
-		protected readonly LinkedList<IModel> Pool;
+		protected readonly LinkedList<IChannel> Pool;
 		protected readonly List<IRecoverable> Recoverables;
 		protected readonly ConcurrentChannelQueue ChannelRequestQueue;
 		private readonly object _workLock = new object();
-		private LinkedListNode<IModel> _current;
+		private LinkedListNode<IChannel> _current;
 		private readonly ILog _logger = LogProvider.For<StaticChannelPool>();
 
-		public StaticChannelPool(IEnumerable<IModel> seed)
+		public StaticChannelPool(IEnumerable<IChannel> seed)
 		{
 			seed = seed.ToList();
-			Pool = new LinkedList<IModel>(seed);
+			Pool = new LinkedList<IChannel>(seed);
 			Recoverables = new List<IRecoverable>();
 			ChannelRequestQueue = new ConcurrentChannelQueue();
 			ChannelRequestQueue.Queued += (sender, args) => StartServeChannels();
@@ -99,7 +99,7 @@ namespace RawRabbit.Channel
 				.Count();
 		}
 
-		protected void ConfigureRecovery(IModel channel)
+		protected void ConfigureRecovery(IChannel channel)
 		{
 			if (!(channel is IRecoverable recoverable))
 			{
@@ -112,27 +112,29 @@ namespace RawRabbit.Channel
 				return;
 			}
 			Recoverables.Add(recoverable);
-			recoverable.Recovery += (sender, args) =>
+			recoverable.RecoveryAsync += (sender, args) =>
 			{
 				_logger.Info("Channel {channelNumber} has been recovered and will be re-added to the channel pool", channel.ChannelNumber);
 				if (Pool.Contains(channel))
 				{
-					return;
+					return Task.CompletedTask;
 				}
 				Pool.AddLast(channel);
 				StartServeChannels();
+                return Task.CompletedTask;
 			};
-			channel.ModelShutdown += (sender, args) =>
+			channel.ChannelShutdownAsync += (sender, args) =>
 			{
 				if (args.Initiator == ShutdownInitiator.Application)
 				{
 					_logger.Info("Channel {channelNumber} is being closed by the application. No recovery will be performed.", channel.ChannelNumber);
 					Recoverables.Remove(recoverable);
 				}
+                return Task.CompletedTask;
 			};
 		}
 
-		public virtual Task<IModel> GetAsync(CancellationToken ct = default(CancellationToken))
+		public virtual Task<IChannel> GetAsync(CancellationToken ct = default(CancellationToken))
 		{
 			var channelTcs = ChannelRequestQueue.Enqueue();
 			ct.Register(() => channelTcs.TrySetCanceled());
@@ -147,8 +149,9 @@ namespace RawRabbit.Channel
 			}
 			foreach (var recoverable in Recoverables)
 			{
-				(recoverable as IModel)?.Dispose();
+				(recoverable as IChannel)?.Dispose();
 			}
 		}
 	}
 }
+

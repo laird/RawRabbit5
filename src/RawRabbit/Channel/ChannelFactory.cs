@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Exceptions;
 using RawRabbit.Channel.Abstraction;
 using RawRabbit.Configuration;
@@ -16,38 +17,40 @@ namespace RawRabbit.Channel
 		private readonly ILog _logger = LogProvider.For<ChannelFactory>();
 		protected readonly IConnectionFactory ConnectionFactory;
 		protected readonly RawRabbitConfiguration ClientConfig;
-		protected readonly ConcurrentBag<IModel> Channels;
+		protected readonly ConcurrentBag<IChannel> Channels;
 		protected IConnection Connection;
 
 		public ChannelFactory(IConnectionFactory connectionFactory, RawRabbitConfiguration config)
 		{
 			ConnectionFactory = connectionFactory;
 			ClientConfig = config;
-			Channels = new ConcurrentBag<IModel>();
+			Channels = new ConcurrentBag<IChannel>();
 		}
 
-		public virtual Task ConnectAsync(CancellationToken token = default(CancellationToken))
+		public virtual async Task ConnectAsync(CancellationToken token = default(CancellationToken))
 		{
 			try
 			{
 				_logger.Debug("Creating a new connection for {hostNameCount} hosts.", ClientConfig.Hostnames.Count);
-				Connection = ConnectionFactory.CreateConnection(ClientConfig.Hostnames, ClientConfig.ClientProvidedName);
-				Connection.ConnectionShutdown += (sender, args) =>
+				Connection = await ConnectionFactory.CreateConnectionAsync(ClientConfig.Hostnames, ClientConfig.ClientProvidedName);
+				Connection.ConnectionShutdownAsync += (sender, args) =>
+                {
 					_logger.Warn("Connection was shutdown by {Initiator}. ReplyText {ReplyText}", args.Initiator, args.ReplyText);
+                    return Task.CompletedTask;
+                };
 			}
 			catch (BrokerUnreachableException e)
 			{
 				_logger.Info("Unable to connect to broker", e);
 				throw;
 			}
-			return Task.FromResult(true);
 		}
 
-		public virtual async Task<IModel> CreateChannelAsync(CancellationToken token = default(CancellationToken))
+		public virtual async Task<IChannel> CreateChannelAsync(CancellationToken token = default(CancellationToken))
 		{
 			var connection = await GetConnectionAsync(token);
 			token.ThrowIfCancellationRequested();
-			var channel = connection.CreateModel();
+			var channel = await connection.CreateChannelAsync();
 			Channels.Add(channel);
 			return channel;
 		}
@@ -84,19 +87,20 @@ namespace RawRabbit.Channel
 			var recoverTcs = new TaskCompletionSource<IConnection>();
 			token.Register(() => recoverTcs.TrySetCanceled());
 
-			EventHandler<EventArgs> completeTask = null;
+			AsyncEventHandler<AsyncEventArgs> completeTask = null;
 			completeTask = (sender, args) =>
 			{
 				if (recoverTcs.Task.IsCanceled)
 				{
-					return;
+					return Task.CompletedTask;
 				}
 				_logger.Info("Connection has been recovered!");
 				recoverTcs.TrySetResult(recoverable as IConnection);
-				recoverable.Recovery -= completeTask;
+				recoverable.RecoveryAsync -= completeTask;
+                return Task.CompletedTask;
 			};
 
-			recoverable.Recovery += completeTask;
+			recoverable.RecoveryAsync += completeTask;
 			return await recoverTcs.Task;
 		}
 
@@ -110,3 +114,4 @@ namespace RawRabbit.Channel
 		}
 	}
 }
+

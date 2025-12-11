@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,7 +15,7 @@ namespace RawRabbit.Pipe.Middleware
 	public class ExplicitAckOptions
 	{
 		public Func<IPipeContext, Task> InvokeMessageHandlerFunc { get; set; }
-		public Func<IPipeContext, IBasicConsumer> ConsumerFunc { get; set; }
+		public Func<IPipeContext, IAsyncBasicConsumer> ConsumerFunc { get; set; }
 		public Func<IPipeContext, BasicDeliverEventArgs> DeliveryArgsFunc { get; set; }
 		public Func<IPipeContext, bool> AutoAckFunc { get; set; }
 		public Func<IPipeContext, Acknowledgement> GetMessageAcknowledgement { get; set; }
@@ -28,7 +28,7 @@ namespace RawRabbit.Pipe.Middleware
 		protected readonly ITopologyProvider Topology;
 		protected readonly IChannelFactory ChannelFactory;
 		protected Func<IPipeContext, BasicDeliverEventArgs> DeliveryArgsFunc;
-		protected Func<IPipeContext, IBasicConsumer> ConsumerFunc;
+		protected Func<IPipeContext, IAsyncBasicConsumer> ConsumerFunc;
 		protected Func<IPipeContext, Acknowledgement> MessageAcknowledgementFunc;
 		protected Predicate<Acknowledgement> AbortExecution;
 		protected Func<IPipeContext, bool> AutoAckFunc;
@@ -67,7 +67,7 @@ namespace RawRabbit.Pipe.Middleware
 				throw new NotSupportedException("Invocation Result of Message Handler not found.");
 			}
 			var deliveryArgs = DeliveryArgsFunc(context);
-			var channel = ConsumerFunc(context).Model;
+			var channel = ((AsyncDefaultBasicConsumer)ConsumerFunc(context))?.Channel;
 
 			if (channel == null)
 			{
@@ -80,13 +80,14 @@ namespace RawRabbit.Pipe.Middleware
 				{
 					var recoverTsc = new TaskCompletionSource<bool>();
 
-					EventHandler<EventArgs> OnRecover = null;
+					AsyncEventHandler<AsyncEventArgs> OnRecover = null;
 					OnRecover = (sender, args) =>
 					{
 						recoverTsc.TrySetResult(true);
-						recoverable.Recovery -= OnRecover;
+						recoverable.RecoveryAsync -= OnRecover;
+                        return Task.CompletedTask;
 					};
-					recoverable.Recovery += OnRecover;
+					recoverable.RecoveryAsync += OnRecover;
 					await recoverTsc.Task;
 					
 				}
@@ -95,36 +96,36 @@ namespace RawRabbit.Pipe.Middleware
 
 			if (ack is Ack)
 			{
-				HandleAck(ack as Ack, channel, deliveryArgs);
+				await HandleAck(ack as Ack, channel, deliveryArgs);
 				return ack;
 			}
 			if (ack is Nack)
 			{
-				HandleNack(ack as Nack, channel, deliveryArgs);
+				await HandleNack(ack as Nack, channel, deliveryArgs);
 				return ack;
 			}
 			if (ack is Reject)
 			{
-				HandleReject(ack as Reject, channel, deliveryArgs);
+				await HandleReject(ack as Reject, channel, deliveryArgs);
 				return ack;
 			}
 
 			throw new NotSupportedException($"Unable to handle {ack.GetType()} as an Acknowledgement.");
 		}
 
-		protected virtual void HandleAck(Ack ack, IModel channel, BasicDeliverEventArgs deliveryArgs)
+		protected virtual async Task HandleAck(Ack ack, IChannel channel, BasicDeliverEventArgs deliveryArgs)
 		{
-			channel.BasicAck(deliveryArgs.DeliveryTag, false);
+			await channel.BasicAckAsync(deliveryArgs.DeliveryTag, false);
 		}
 
-		protected virtual void HandleNack(Nack nack, IModel channel, BasicDeliverEventArgs deliveryArgs)
+		protected virtual async Task HandleNack(Nack nack, IChannel channel, BasicDeliverEventArgs deliveryArgs)
 		{
-			channel.BasicNack(deliveryArgs.DeliveryTag, false, nack.Requeue);
+			await channel.BasicNackAsync(deliveryArgs.DeliveryTag, false, nack.Requeue);
 		}
 
-		protected virtual void HandleReject(Reject reject, IModel channel, BasicDeliverEventArgs deliveryArgs)
+		protected virtual async Task HandleReject(Reject reject, IChannel channel, BasicDeliverEventArgs deliveryArgs)
 		{
-			channel.BasicReject(deliveryArgs.DeliveryTag, reject.Requeue);
+			await channel.BasicRejectAsync(deliveryArgs.DeliveryTag, reject.Requeue);
 		}
 
 		protected virtual bool GetAutoAck(IPipeContext context)
@@ -133,3 +134,4 @@ namespace RawRabbit.Pipe.Middleware
 		}
 	}
 }
+

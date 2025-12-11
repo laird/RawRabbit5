@@ -1,8 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using RabbitMQ.Client;
-using RabbitMQ.Client.Framing;
+using RabbitMQ.Client;
 using RawRabbit.Common;
 using RawRabbit.Serialization;
 
@@ -47,7 +47,7 @@ namespace RawRabbit.Configuration.BasicPublish
 		{
 			return new BasicPublishConfiguration
 			{
-				BasicProperties = new BasicProperties()
+				BasicProperties = new RabbitMQ.Client.BasicProperties()
 			};
 		}
 
@@ -68,11 +68,11 @@ namespace RawRabbit.Configuration.BasicPublish
 
 		protected virtual IBasicProperties GetBasicProperties(Type type)
 		{
-			return new BasicProperties
+			return new RabbitMQ.Client.BasicProperties
 			{
 				Type = type.GetUserFriendlyName(),
 				MessageId = Guid.NewGuid().ToString(),
-				DeliveryMode = _config.PersistentDeliveryMode ? Convert.ToByte(2) : Convert.ToByte(1),
+				DeliveryMode = _config.PersistentDeliveryMode ? DeliveryModes.Persistent : DeliveryModes.Transient,
 				ContentType = _serializer.ContentType,
 				ContentEncoding = "UTF-8",
 				UserId =  _config.Username,

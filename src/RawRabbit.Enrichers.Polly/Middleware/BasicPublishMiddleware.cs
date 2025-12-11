@@ -12,8 +12,8 @@ namespace RawRabbit.Enrichers.Polly.Middleware
 		public BasicPublishMiddleware(IExclusiveLock exclusive, BasicPublishOptions options = null)
 			: base(exclusive, options) { }
 
-		protected override void BasicPublish(
-				IModel channel,
+		protected override async Task BasicPublish(
+				IChannel channel,
 				string exchange,
 				string routingKey,
 				bool mandatory,
@@ -22,12 +22,8 @@ namespace RawRabbit.Enrichers.Polly.Middleware
 				IPipeContext context)
 		{
 			var policy = context.GetPolicy(PolicyKeys.BasicPublish);
-			var policyTask = policy.ExecuteAsync(
-				action: () =>
-				{
-					base.BasicPublish(channel, exchange, routingKey, mandatory, basicProps, body, context);
-					return Task.FromResult(true);
-				},
+			await policy.ExecuteAsync(
+				action: ctx => base.BasicPublish(channel, exchange, routingKey, mandatory, basicProps, body, context),
 				contextData: new Dictionary<string, object>
 				{
 					[RetryKey.PipeContext] = context,
@@ -37,8 +33,6 @@ namespace RawRabbit.Enrichers.Polly.Middleware
 					[RetryKey.BasicProperties] = basicProps,
 					[RetryKey.PublishBody] = body,
 				});
-			policyTask.ConfigureAwait(false);
-			policyTask.GetAwaiter().GetResult();
 		}
 	}
 }

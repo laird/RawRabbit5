@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using RabbitMQ.Client;
 using RawRabbit.Consumer;
 
@@ -17,13 +17,13 @@ namespace RawRabbit.Subscription
 		public string ConsumerTag { get; }
 		public bool Active { get; set; }
 
-		private readonly IBasicConsumer _consumer;
+		private readonly IAsyncBasicConsumer _consumer;
 
-		public Subscription(IBasicConsumer consumer, string queueName)
+		public Subscription(IAsyncBasicConsumer consumer, string queueName)
 		{
 			Active = true;
 			_consumer = consumer;
-			var basicConsumer = consumer as DefaultBasicConsumer;
+			var basicConsumer = consumer as RawRabbitConsumer;
 			if (basicConsumer == null)
 			{
 				return;
@@ -34,7 +34,7 @@ namespace RawRabbit.Subscription
 
 		public void Dispose()
 		{
-			if (!_consumer.Model.IsOpen)
+			if (!((RawRabbitConsumer)_consumer).Channel.IsOpen)
 			{
 				return;
 			}

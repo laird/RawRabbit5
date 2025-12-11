@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using RabbitMQ.Client;
@@ -9,7 +9,7 @@ namespace RawRabbit.Pipe.Middleware
 {
 	public class BasicPublishOptions
 	{
-		public Func<IPipeContext, IModel> ChannelFunc { get; set; }
+		public Func<IPipeContext, IChannel> ChannelFunc { get; set; }
 		public Func<IPipeContext, string> ExchangeNameFunc { get; set; }
 		public Func<IPipeContext, string> RoutingKeyFunc { get; set; }
 		public Func<IPipeContext, bool> MandatoryFunc { get; set; }
@@ -20,7 +20,7 @@ namespace RawRabbit.Pipe.Middleware
 	public class BasicPublishMiddleware : Middleware
 	{
 		protected readonly IExclusiveLock Exclusive;
-		protected Func<IPipeContext, IModel> ChannelFunc;
+		protected Func<IPipeContext, IChannel> ChannelFunc;
 		protected Func<IPipeContext, string> ExchangeNameFunc;
 		protected Func<IPipeContext, string> RoutingKeyFunc;
 		protected Func<IPipeContext, bool> MandatoryFunc;
@@ -50,8 +50,8 @@ namespace RawRabbit.Pipe.Middleware
 
 			_logger.Info("Performing basic publish with routing key {routingKey} on exchange {exchangeName}.", routingKey, exchangeName);
 
-			ExclusiveExecute(channel, c =>
-					BasicPublish(
+			await ExclusiveExecute(channel, async c =>
+					await BasicPublish(
 						channel: c,
 						exchange: exchangeName,
 						routingKey: routingKey,
@@ -65,20 +65,20 @@ namespace RawRabbit.Pipe.Middleware
 			await Next.InvokeAsync(context, token);
 		}
 
-		protected virtual void BasicPublish(IModel channel, string exchange, string routingKey, bool mandatory, IBasicProperties basicProps, byte[] body, IPipeContext context)
+		protected virtual async Task BasicPublish(IChannel channel, string exchange, string routingKey, bool mandatory, IBasicProperties basicProps, byte[] body, IPipeContext context)
 		{
-			channel.BasicPublish(
+			await channel.BasicPublishAsync(
 				exchange: exchange,
 				routingKey: routingKey,
 				mandatory: mandatory,
-				basicProperties: basicProps,
+				basicProperties: (RabbitMQ.Client.BasicProperties)basicProps,
 				body: body
 			);
 		}
 
-		protected virtual void ExclusiveExecute(IModel channel, Action<IModel> action, CancellationToken token)
+		protected virtual async Task ExclusiveExecute(IChannel channel, Func<IChannel, Task> action, CancellationToken token)
 		{
-			Exclusive.Execute(channel, action, token);
+			await Exclusive.ExecuteAsync(channel, action, token);
 		}
 
 		protected virtual byte[] GetMessageBody(IPipeContext context)
@@ -126,7 +126,7 @@ namespace RawRabbit.Pipe.Middleware
 			return exchange;
 		}
 
-		protected virtual IModel GetOrCreateChannel(IPipeContext context)
+		protected virtual IChannel GetOrCreateChannel(IPipeContext context)
 		{
 			var channel = ChannelFunc(context);
 			if (channel == null)
@@ -137,3 +137,4 @@ namespace RawRabbit.Pipe.Middleware
 		}
 	}
 }
+

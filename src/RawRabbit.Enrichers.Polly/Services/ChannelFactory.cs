@@ -10,9 +10,9 @@ namespace RawRabbit.Enrichers.Polly.Services
 {
 	public class ChannelFactory : Channel.ChannelFactory
 	{
-		protected Policy CreateChannelPolicy;
-		protected Policy ConnectPolicy;
-		protected Policy GetConnectionPolicy;
+		protected AsyncPolicy CreateChannelPolicy;
+		protected AsyncPolicy ConnectPolicy;
+		protected AsyncPolicy GetConnectionPolicy;
 
 		public ChannelFactory(IConnectionFactory connectionFactory, RawRabbitConfiguration config, ConnectionPolicies policies = null)
 			: base(connectionFactory, config)
@@ -21,11 +21,15 @@ namespace RawRabbit.Enrichers.Polly.Services
 			ConnectPolicy = policies?.Connect ?? Policy.NoOpAsync();
 			GetConnectionPolicy = policies?.GetConnection ?? Policy.NoOpAsync();
 		}
+// ... (omitting body for brevity, only replacing fields/constructor)
+// Wait, I should do the whole file or chunks.
+// Multi replacement is safer.
+
 
 		public override Task ConnectAsync(CancellationToken token = default(CancellationToken))
 		{
 			return ConnectPolicy.ExecuteAsync(
-				action: ct => base.ConnectAsync(ct),
+				action: (ctx, ct) => base.ConnectAsync(ct),
 				contextData: new Dictionary<string, object>
 				{
 					[RetryKey.ConnectionFactory] = ConnectionFactory,
@@ -38,7 +42,7 @@ namespace RawRabbit.Enrichers.Polly.Services
 		protected override Task<IConnection> GetConnectionAsync(CancellationToken token = default(CancellationToken))
 		{
 			return GetConnectionPolicy.ExecuteAsync(
-				action: ct => base.GetConnectionAsync(ct),
+				action: (ctx, ct) => base.GetConnectionAsync(ct),
 				contextData: new Dictionary<string, object>
 				{
 					[RetryKey.ConnectionFactory] = ConnectionFactory,
@@ -48,10 +52,10 @@ namespace RawRabbit.Enrichers.Polly.Services
 			);
 		}
 
-		public override Task<IModel> CreateChannelAsync(CancellationToken token = default(CancellationToken))
+		public override Task<IChannel> CreateChannelAsync(CancellationToken token = default(CancellationToken))
 		{
 			return CreateChannelPolicy.ExecuteAsync(
-				action: ct => base.CreateChannelAsync(ct),
+				action: (ctx, ct) => base.CreateChannelAsync(ct),
 				contextData: new Dictionary<string, object>
 				{
 					[RetryKey.ConnectionFactory] = ConnectionFactory,
@@ -68,16 +72,16 @@ namespace RawRabbit.Enrichers.Polly.Services
 		/// Used whenever 'CreateChannelAsync' is called.
 		/// Expects an async policy.
 		/// </summary>
-		public Policy CreateChannel { get; set; }
+		public AsyncPolicy CreateChannel { get; set; }
 
 		/// <summary>
 		/// Used whenever an existing connection is retrieved.
 		/// </summary>
-		public Policy GetConnection { get; set; }
+		public AsyncPolicy GetConnection { get; set; }
 
 		/// <summary>
 		/// Used when establishing the initial connection
 		/// </summary>
-		public Policy Connect { get; set; }
+		public AsyncPolicy Connect { get; set; }
 	}
 }

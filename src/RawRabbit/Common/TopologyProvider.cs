@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
@@ -24,7 +24,7 @@ namespace RawRabbit.Common
 	public class TopologyProvider : ITopologyProvider, IDisposable
 	{
 		private readonly IChannelFactory _channelFactory;
-		private IModel _channel;
+		private IChannel _channel;
 		private readonly object _processLock = new object();
 		private readonly Task _completed = Task.FromResult(true);
 		private readonly List<string> _initExchanges;
@@ -130,11 +130,11 @@ namespace RawRabbit.Common
 			_logger.Info("Binding queue {queueName} to exchange {exchangeName} with routing key {routingKey}", bind.Queue, bind.Exchange, bind.RoutingKey);
 
 			var channel = GetOrCreateChannel();
-			channel.QueueBind(
+			channel.QueueBindAsync(
 				queue: bind.Queue,
 				exchange: bind.Exchange,
 				routingKey: bind.RoutingKey
-				);
+				).GetAwaiter().GetResult();
 			_queueBinds.Add(bindKey);
 		}
 
@@ -143,12 +143,12 @@ namespace RawRabbit.Common
 			_logger.Info("Unbinding queue {queueName} from exchange {exchangeName} with routing key {routingKey}", bind.Queue, bind.Exchange, bind.RoutingKey);
 
 			var channel = GetOrCreateChannel();
-			channel.QueueUnbind(
+			channel.QueueUnbindAsync(
 				queue: bind.Queue,
 				exchange: bind.Exchange,
 				routingKey: bind.RoutingKey,
 				arguments: null
-			);
+			).GetAwaiter().GetResult();
 			var bindKey = $"{bind.Queue}_{bind.Exchange}_{bind.RoutingKey}";
 			if (_queueBinds.Contains(bindKey))
 			{
@@ -166,12 +166,12 @@ namespace RawRabbit.Common
 			_logger.Info("Declaring queue {queueName}.", queue.Name);
 
 			var channel = GetOrCreateChannel();
-			channel.QueueDeclare(
+			channel.QueueDeclareAsync(
 				queue.Name,
 				queue.Durable,
 				queue.Exclusive,
 				queue.AutoDelete,
-				queue.Arguments);
+				queue.Arguments).GetAwaiter().GetResult();
 
 			if (queue.AutoDelete)
 			{
@@ -188,12 +188,12 @@ namespace RawRabbit.Common
 
 			_logger.Info("Declaring exchange {exchangeName}.", exchange.Name);
 			var channel = GetOrCreateChannel();
-			channel.ExchangeDeclare(
+			channel.ExchangeDeclareAsync(
 				exchange.Name,
 				exchange.ExchangeType,
 				exchange.Durable,
 				exchange.AutoDelete,
-				exchange.Arguments);
+				exchange.Arguments).GetAwaiter().GetResult();
 			if (!exchange.AutoDelete)
 			{
 				_initExchanges.Add(exchange.Name);
@@ -279,7 +279,7 @@ namespace RawRabbit.Common
 			Monitor.Exit(_processLock);
 		}
 
-		private IModel GetOrCreateChannel()
+		private IChannel GetOrCreateChannel()
 		{
 			if (_channel?.IsOpen ?? false)
 			{
@@ -342,3 +342,4 @@ namespace RawRabbit.Common
 		#endregion
 	}
 }
+

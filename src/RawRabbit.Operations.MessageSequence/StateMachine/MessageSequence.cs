@@ -30,7 +30,7 @@ namespace RawRabbit.Operations.MessageSequence.StateMachine
 		private readonly Queue<StepDefinition> _stepDefinitions;
 		private readonly List<Subscription.ISubscription> _subscriptions;
 		private readonly ILog _logger = LogProvider.For<MessageSequence>();
-		private IModel _channel;
+		private IChannel _channel;
 
 		public MessageSequence(IBusClient client, INamingConventions naming, RawRabbitConfiguration clientCfg, SequenceModel model = null) : base(model)
 		{

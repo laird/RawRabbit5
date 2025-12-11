@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using RabbitMQ.Client;
@@ -9,7 +9,7 @@ namespace RawRabbit.Pipe.Middleware
 	public class SubscriptionOptions
 	{
 		public Func<IPipeContext, string> QueueNameFunc { get; set; }
-		public Func<IPipeContext, IBasicConsumer> ConsumeFunc{ get; set; }
+		public Func<IPipeContext, IAsyncBasicConsumer> ConsumeFunc{ get; set; }
 		public Action<IPipeContext, ISubscription> SaveInContext { get; set; }
 	}
 
@@ -17,7 +17,7 @@ namespace RawRabbit.Pipe.Middleware
 	{
 		protected ISubscriptionRepository Repo;
 		protected Func<IPipeContext, string> QueueNameFunc;
-		protected Func<IPipeContext, IBasicConsumer> ConsumerFunc;
+		protected Func<IPipeContext, IAsyncBasicConsumer> ConsumerFunc;
 		protected Action<IPipeContext, ISubscription> SaveInContext;
 
 		public SubscriptionMiddleware(ISubscriptionRepository repo, SubscriptionOptions options = null)
@@ -38,7 +38,7 @@ namespace RawRabbit.Pipe.Middleware
 			await Next.InvokeAsync(context, token);
 		}
 
-		protected virtual IBasicConsumer GetConsumer(IPipeContext context)
+		protected virtual IAsyncBasicConsumer GetConsumer(IPipeContext context)
 		{
 			return ConsumerFunc(context);
 		}
@@ -48,7 +48,7 @@ namespace RawRabbit.Pipe.Middleware
 			return QueueNameFunc(context);
 		}
 
-		protected virtual ISubscription CreateSubscription(IBasicConsumer consumer, string queueName)
+		protected virtual ISubscription CreateSubscription(IAsyncBasicConsumer consumer, string queueName)
 		{
 			return new Subscription.Subscription(consumer, queueName);
 		}

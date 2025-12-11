@@ -26,7 +26,7 @@ namespace RawRabbit.Enrichers.GlobalExecutionId.Middleware
 		{
 			BasicPropsFunc = options?.BasicPropsFunc ?? (context => context.GetBasicProperties());
 			GlobalExecutionIdFunc = options?.GlobalExecutionIdFunc ?? (context => context.GetGlobalExecutionId());
-			AppendAction = options?.AppendHeaderAction ?? ((props, id) => props.Headers.TryAdd(PropertyHeaders.GlobalExecutionId, id));
+			AppendAction = options?.AppendHeaderAction ?? ((Action<IBasicProperties, string>)((props, id) => props.Headers.TryAdd(PropertyHeaders.GlobalExecutionId, id)));
 		}
 
 		public override Task InvokeAsync(IPipeContext context, CancellationToken token = new CancellationToken())

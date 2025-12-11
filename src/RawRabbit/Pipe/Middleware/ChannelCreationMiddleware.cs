@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using RabbitMQ.Client;
@@ -9,16 +9,16 @@ namespace RawRabbit.Pipe.Middleware
 	public class ChannelCreationOptions
 	{
 		public Predicate<IPipeContext> CreatePredicate { get; set; }
-		public Action<IPipeContext, IModel> PostExecuteAction { get; set; }
-		public Func<IChannelFactory, CancellationToken, Task<IModel>> CreateFunc { get; set; }
+		public Action<IPipeContext, IChannel> PostExecuteAction { get; set; }
+		public Func<IChannelFactory, CancellationToken, Task<IChannel>> CreateFunc { get; set; }
 	}
 
 	public class ChannelCreationMiddleware : Middleware
 	{
 		protected readonly IChannelFactory ChannelFactory;
 		protected Predicate<IPipeContext> CreatePredicate;
-		protected Func<IChannelFactory, CancellationToken, Task<IModel>> CreateFunc;
-		protected Action<IPipeContext, IModel> PostExecuteAction;
+		protected Func<IChannelFactory, CancellationToken, Task<IChannel>> CreateFunc;
+		protected Action<IPipeContext, IChannel> PostExecuteAction;
 
 		public ChannelCreationMiddleware(IChannelFactory channelFactory, ChannelCreationOptions options = null)
 		{
@@ -41,7 +41,7 @@ namespace RawRabbit.Pipe.Middleware
 
 		}
 
-		protected virtual Task<IModel> GetOrCreateChannelAsync(IChannelFactory factory, CancellationToken token)
+		protected virtual Task<IChannel> GetOrCreateChannelAsync(IChannelFactory factory, CancellationToken token)
 		{
 			return CreateFunc(factory, token);
 		}

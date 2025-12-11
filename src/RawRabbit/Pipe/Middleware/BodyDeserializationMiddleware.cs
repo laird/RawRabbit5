@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,7 +30,7 @@ namespace RawRabbit.Pipe.Middleware
 		{
 			Serializer = serializer;
 			MessageTypeFunc = options?.BodyTypeFunc ?? (context => context.GetMessageType());
-			BodyBytesFunc = options?.BodyFunc ?? (context =>context.GetDeliveryEventArgs()?.Body);
+			BodyBytesFunc = options?.BodyFunc ?? (context => context.GetDeliveryEventArgs()?.Body.ToArray());
 			PersistAction = options?.PersistAction ?? ((context, msg) => context.Properties.TryAdd(PipeKey.Message, msg));
 			BodyContentTypeFunc = options?.BodyContentTypeFunc ?? (context => context.GetDeliveryEventArgs()?.BasicProperties.ContentType);
 			ActivateContentTypeCheck = options?.ActivateContentTypeCheck ?? (context => context.GetContentTypeCheckActivated());

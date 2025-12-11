@@ -16,12 +16,12 @@ namespace RawRabbit.Enrichers.Polly.Middleware
 		{
 			var policy = context.GetPolicy(PolicyKeys.MessageAcknowledge);
 			var result = await policy.ExecuteAsync(
-				action: () => Task.FromResult(base.AcknowledgeMessageAsync(context)),
+				action: ctx => base.AcknowledgeMessageAsync(context),
 				contextData: new Dictionary<string, object>
 				{
 					[RetryKey.PipeContext] = context
 				});
-			return await result;
+			return result;
 		}
 	}
 }

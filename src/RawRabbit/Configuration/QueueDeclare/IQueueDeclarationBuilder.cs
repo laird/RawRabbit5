@@ -1,4 +1,4 @@
-﻿namespace RawRabbit.Configuration.Queue
+namespace RawRabbit.Configuration.Queue
 {
 	public interface IQueueDeclarationBuilder
 	{

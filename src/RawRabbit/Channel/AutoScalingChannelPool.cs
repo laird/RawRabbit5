@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -39,7 +39,7 @@ namespace RawRabbit.Channel
 			}
 		}
 
-		public override async Task<IModel> GetAsync(CancellationToken ct = default(CancellationToken))
+		public override async Task<IChannel> GetAsync(CancellationToken ct = default(CancellationToken))
 		{
 			var activeChannels = GetActiveChannelCount();
 			if (activeChannels  < _options.MinimunPoolSize)
@@ -95,7 +95,7 @@ namespace RawRabbit.Channel
 					Timer disposeTimer = null;
 					disposeTimer = new Timer(o =>
 					{
-						(o as IModel)?.Dispose();
+						(o as IChannel)?.Dispose();
 						disposeTimer?.Dispose();
 					}, toRemove, _options.GracefulCloseInterval, new TimeSpan(-1));
 				}

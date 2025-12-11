@@ -24,7 +24,7 @@ namespace RawRabbit.Operations.Respond.Middleware
 	{
 		protected Func<IPipeContext, BasicDeliverEventArgs> DeliveryArgsFunc;
 		protected Func<IPipeContext, ConsumeConfiguration> ConsumeConfigFunc;
-		protected Func<IPipeContext, IModel> ChannelFunc;
+		protected Func<IPipeContext, IChannel> ChannelFunc;
 		protected Action<IPipeContext, ExceptionInformation> SaveAction;
 
 		public RespondExceptionMiddleware(IPipeBuilderFactory factory, RespondExceptionOptions options = null)

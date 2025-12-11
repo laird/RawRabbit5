@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using RabbitMQ.Client;
@@ -8,14 +8,14 @@ namespace RawRabbit.Pipe.Middleware
 	public class QueueDeleteOptions
 	{
 		public Func<IPipeContext, string> QueueNameFunc { get; set; }
-		public Func<IPipeContext, IModel> ChannelFunc { get; set; }
+		public Func<IPipeContext, IChannel> ChannelFunc { get; set; }
 		public Func<IPipeContext, bool> IfUnusedFunc { get; set; }
 		public Func<IPipeContext, bool> IfEmptyFunc { get; set; }
 	}
 
 	public class QueueDeleteMiddleware : Middleware
 	{
-		protected Func<IPipeContext, IModel> ChannelFunc;
+		protected Func<IPipeContext, IChannel> ChannelFunc;
 		protected Func<IPipeContext, string> QueueNameFunc;
 		protected Func<IPipeContext, bool> IfUnusedFunc;
 		protected Func<IPipeContext, bool> IfEmptyFunc;
@@ -38,13 +38,13 @@ namespace RawRabbit.Pipe.Middleware
 			await Next.InvokeAsync(context, token);
 		}
 
-		private Task DeleteQueueAsync(IModel channel, string queueName, bool ifUnused, bool ifEmpty)
+		private Task DeleteQueueAsync(IChannel channel, string queueName, bool ifUnused, bool ifEmpty)
 		{
-			channel?.QueueDelete(queueName, ifUnused, ifEmpty);
+			channel?.QueueDeleteAsync(queueName, ifUnused, ifEmpty);
 			return Task.FromResult(true);
 		}
 
-		protected virtual IModel GetChannel(IPipeContext context)
+		protected virtual IChannel GetChannel(IPipeContext context)
 		{
 			return ChannelFunc(context);
 		}
@@ -65,3 +65,4 @@ namespace RawRabbit.Pipe.Middleware
 		}
 	}
 }
+

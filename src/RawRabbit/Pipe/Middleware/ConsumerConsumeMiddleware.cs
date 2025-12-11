@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using RabbitMQ.Client;
@@ -11,7 +11,7 @@ namespace RawRabbit.Pipe.Middleware
 	public class BasicConsumeOptions
 	{
 		public Func<IPipeContext, ConsumeConfiguration> ConsumeConfigFunc { get; set; }
-		public Func<IPipeContext, IBasicConsumer> ConsumerFunc { get; set; }
+		public Func<IPipeContext, IAsyncBasicConsumer> ConsumerFunc { get; set; }
 		public Func<IPipeContext, bool> ConfigValidatePredicate { get; set; }
 	}
 
@@ -19,7 +19,7 @@ namespace RawRabbit.Pipe.Middleware
 	{
 		private readonly IConsumerFactory _factory;
 		protected Func<IPipeContext, ConsumeConfiguration> ConsumeConfigFunc;
-		protected Func<IPipeContext, IBasicConsumer> ConsumerFunc;
+		protected Func<IPipeContext, IAsyncBasicConsumer> ConsumerFunc;
 		protected Func<IPipeContext, bool> ConfigValidatePredicate;
 		private readonly ILog _logger = LogProvider.For<ConsumerConsumeMiddleware>();
 
@@ -56,12 +56,12 @@ namespace RawRabbit.Pipe.Middleware
 			return ConsumeConfigFunc?.Invoke(context);
 		}
 
-		protected virtual IBasicConsumer GetConsumer(IPipeContext context)
+		protected virtual IAsyncBasicConsumer GetConsumer(IPipeContext context)
 		{
 			return ConsumerFunc?.Invoke(context);
 		}
 
-		protected virtual void BasicConsume(IBasicConsumer consumer, ConsumeConfiguration config)
+		protected virtual void BasicConsume(IAsyncBasicConsumer consumer, ConsumeConfiguration config)
 		{
 			_factory.ConfigureConsume(consumer, config);
 		}

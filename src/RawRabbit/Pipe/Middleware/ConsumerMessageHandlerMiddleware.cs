@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,7 +12,7 @@ namespace RawRabbit.Pipe.Middleware
 	public class ConsumeOptions
 	{
 		public Action<IPipeBuilder> Pipe { get; set; }
-		public Func<IPipeContext, IBasicConsumer> ConsumerFunc { get; set; }
+		public Func<IPipeContext, IAsyncBasicConsumer> ConsumerFunc { get; set; }
 		public Func<IPipeContext, Action<Func<Task>, CancellationToken>> ThrottleFuncFunc { get; set; }
 	}
 
@@ -20,7 +20,7 @@ namespace RawRabbit.Pipe.Middleware
 	{
 		protected IPipeContextFactory ContextFactory;
 		protected Middleware ConsumePipe;
-		protected Func<IPipeContext, IBasicConsumer> ConsumeFunc;
+		protected Func<IPipeContext, IAsyncBasicConsumer> ConsumeFunc;
 		protected Func<IPipeContext, SemaphoreSlim> SemaphoreFunc;
 		protected Func<IPipeContext, Action<Func<Task>, CancellationToken>> ThrottledExecutionFunc;
 		private readonly ILog _logger = LogProvider.For<ConsumerMessageHandlerMiddleware>();

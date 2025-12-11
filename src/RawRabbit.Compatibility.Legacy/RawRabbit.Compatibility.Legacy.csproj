@@ -1,11 +1,9 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Description>Bus Client that is API compatible with 1.x.</Description>
     <AssemblyTitle>RawRabbit.Compatibility.Legacy</AssemblyTitle>
     <Version>2.0.0-alpha</Version>
     <Authors>pardahlman</Authors>
-    <TargetFrameworks>netstandard1.5;net451</TargetFrameworks>
     <AssemblyName>RawRabbit.Compatibility.Legacy</AssemblyName>
     <PackageId>RawRabbit.Compatibility.Legacy</PackageId>
     <PackageTags>rabbitmq;rawrabbit;compatibility</PackageTags>
@@ -16,7 +14,6 @@
     <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
     <DefineConstants>LIBLOG_PORTABLE</DefineConstants>
   </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\RawRabbit.Operations.Request\RawRabbit.Operations.Request.csproj" />
     <ProjectReference Include="..\RawRabbit.Operations.Publish\RawRabbit.Operations.Publish.csproj" />
@@ -24,10 +21,4 @@
     <ProjectReference Include="..\RawRabbit.Enrichers.MessageContext\RawRabbit.Enrichers.MessageContext.csproj" />
     <ProjectReference Include="..\RawRabbit.Enrichers.MessageContext.Subscribe\RawRabbit.Enrichers.MessageContext.Subscribe.csproj" />
   </ItemGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net451' ">
-    <Reference Include="System" />
-    <Reference Include="Microsoft.CSharp" />
-  </ItemGroup>
-
 </Project>

@@ -1,4 +1,4 @@
-﻿using System.Threading;
+using System.Threading;
 using System.Threading.Tasks;
 using RabbitMQ.Client;
 using RawRabbit.Channel.Abstraction;
@@ -26,7 +26,7 @@ namespace RawRabbit.Pipe.Middleware
 			}
 		}
 
-		protected virtual Task<IModel> CreateChannelAsync(IPipeContext context, CancellationToken ct)
+		protected virtual Task<IChannel> CreateChannelAsync(IPipeContext context, CancellationToken ct)
 		{
 			return ChannelFactory.CreateChannelAsync(ct);
 		}

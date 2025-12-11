@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using RabbitMQ.Client;
@@ -10,14 +10,14 @@ namespace RawRabbit.Pipe.Middleware
 {
 	public class ConsumerCreationOptions
 	{
-		public Func<IConsumerFactory, CancellationToken, IPipeContext, Task<IBasicConsumer>> ConsumerFunc { get; set; }
+		public Func<IConsumerFactory, CancellationToken, IPipeContext, Task<IAsyncBasicConsumer>> ConsumerFunc { get; set; }
 	}
 
 	public class ConsumerCreationMiddleware : Middleware
 	{
 		protected IConsumerFactory ConsumerFactory;
 		protected Func<IPipeContext, ConsumeConfiguration> ConfigFunc;
-		protected Func<IConsumerFactory, CancellationToken, IPipeContext, Task<IBasicConsumer>> ConsumerFunc;
+		protected Func<IConsumerFactory, CancellationToken, IPipeContext, Task<IAsyncBasicConsumer>> ConsumerFunc;
 		private readonly ILog _logger = LogProvider.For<ConsumerCreationMiddleware>();
 
 		public ConsumerCreationMiddleware(IConsumerFactory consumerFactory, ConsumerCreationOptions options = null)
@@ -33,7 +33,7 @@ namespace RawRabbit.Pipe.Middleware
 			await Next.InvokeAsync(context, token);
 		}
 
-		protected virtual Task<IBasicConsumer> GetOrCreateConsumerAsync(IPipeContext context, CancellationToken token)
+		protected virtual Task<IAsyncBasicConsumer> GetOrCreateConsumerAsync(IPipeContext context, CancellationToken token)
 		{
 			var consumerTask = ConsumerFunc(ConsumerFactory, token, context);
 			if (consumerTask == null)

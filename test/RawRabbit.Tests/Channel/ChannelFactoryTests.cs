@@ -19,15 +19,15 @@ namespace RawRabbit.Tests.Channel
 			var connectionFactroy = new Mock<IConnectionFactory>();
 			var connection = new Mock<IConnection>();
 			connectionFactroy
-				.Setup(c => c.CreateConnection(
-					It.IsAny<List<string>>()))
-				.Returns(connection.Object);
+				.Setup(c => c.CreateConnectionAsync(
+					It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
+				.ReturnsAsync(connection.Object);
 			connection
 				.Setup(c => c.IsOpen)
 				.Returns(false);
 			connection
 				.Setup(c => c.CloseReason)
-				.Returns(new ShutdownEventArgs(ShutdownInitiator.Application, 0, string.Empty));
+				.Returns(new RabbitMQ.Client.ShutdownEventArgs(RabbitMQ.Client.ShutdownInitiator.Application, 0, string.Empty));
 			var channelFactory = new ChannelFactory(connectionFactroy.Object, RawRabbitConfiguration.Local);
 
 			/* Test */
@@ -50,15 +50,15 @@ namespace RawRabbit.Tests.Channel
 			var connectionFactroy = new Mock<IConnectionFactory>();
 			var connection = new Mock<IConnection>();
 			connectionFactroy
-				.Setup(c => c.CreateConnection(
-					It.IsAny<List<string>>()))
-				.Returns(connection.Object);
+				.Setup(c => c.CreateConnectionAsync(
+					It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
+				.ReturnsAsync(connection.Object);
 			connection
 				.Setup(c => c.IsOpen)
 				.Returns(false);
 			connection
 				.Setup(c => c.CloseReason)
-				.Returns(new ShutdownEventArgs(ShutdownInitiator.Library, 0, string.Empty));
+				.Returns(new RabbitMQ.Client.ShutdownEventArgs(RabbitMQ.Client.ShutdownInitiator.Library, 0, string.Empty));
 			var channelFactory = new ChannelFactory(connectionFactroy.Object, RawRabbitConfiguration.Local);
 
 			/* Test */
@@ -78,16 +78,16 @@ namespace RawRabbit.Tests.Channel
 		public async Task Should_Return_Channel_From_Connection()
 		{
 			/* Setup */
-			var channel = new Mock<IModel>();
+			var channel = new Mock<IChannel>();
 			var connectionFactroy = new Mock<IConnectionFactory>();
 			var connection = new Mock<IConnection>();
 			connectionFactroy
-				.Setup(c => c.CreateConnection(
-					It.IsAny<List<string>>()))
-				.Returns(connection.Object);
+				.Setup(c => c.CreateConnectionAsync(
+					It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
+				.ReturnsAsync(connection.Object);
 			connection
-				.Setup(c => c.CreateModel())
-				.Returns(channel.Object);
+				.Setup(c => c.CreateChannelAsync(It.IsAny<CancellationToken>()))
+				.ReturnsAsync(channel.Object);
 			connection
 				.Setup(c => c.IsOpen)
 				.Returns(true);
@@ -104,17 +104,17 @@ namespace RawRabbit.Tests.Channel
 		public async Task Should_Wait_For_Connection_To_Recover_Before_Returning_Channel()
 		{
 			/* Setup */
-			var channel = new Mock<IModel>();
+			var channel = new Mock<IChannel>();
 			var connectionFactroy = new Mock<IConnectionFactory>();
 			var connection = new Mock<IConnection>();
 			var recoverable = connection.As<IRecoverable>();
 			connectionFactroy
-				.Setup(c => c.CreateConnection(
-					It.IsAny<List<string>>()))
-				.Returns(connection.Object);
+				.Setup(c => c.CreateConnectionAsync(
+					It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
+				.ReturnsAsync(connection.Object);
 			connection
-				.Setup(c => c.CreateModel())
-				.Returns(channel.Object);
+				.Setup(c => c.CreateChannelAsync(It.IsAny<CancellationToken>()))
+				.ReturnsAsync(channel.Object);
 			connection
 				.Setup(c => c.IsOpen)
 				.Returns(false);
@@ -126,7 +126,7 @@ namespace RawRabbit.Tests.Channel
 			channelTask.Wait(TimeSpan.FromMilliseconds(30));
 			Assert.False(channelTask.IsCompleted);
 
-			recoverable.Raise(r => r.Recovery += null, null, null);
+			recoverable.Raise(r => r.RecoverySucceeded += null, null);
 			await channelTask;
 
 			Assert.Equal(channel.Object, channelTask.Result);

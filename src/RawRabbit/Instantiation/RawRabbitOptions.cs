@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using RawRabbit.Configuration;
 using RawRabbit.DependencyInjection;
 

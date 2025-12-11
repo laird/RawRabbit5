@@ -1,4 +1,4 @@
-﻿namespace RawRabbit.Exceptions
+namespace RawRabbit.Exceptions
 {
 	/// <summary>
 	/// Holds information about exception thrown in a remote message handler. 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using RabbitMQ.Client;
 using ExchangeType = RawRabbit.Configuration.Exchange.ExchangeType;

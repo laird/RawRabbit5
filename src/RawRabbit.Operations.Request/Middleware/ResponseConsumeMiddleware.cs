@@ -23,8 +23,8 @@ namespace RawRabbit.Operations.Request.Middleware
 
 	public class ResponseConsumeMiddleware : Pipe.Middleware.Middleware
 	{
-		protected static readonly ConcurrentDictionary<IBasicConsumer, ConcurrentDictionary<string, TaskCompletionSource<BasicDeliverEventArgs>>> AllResponses =
-			new ConcurrentDictionary<IBasicConsumer, ConcurrentDictionary<string, TaskCompletionSource<BasicDeliverEventArgs>>>();
+		protected static readonly ConcurrentDictionary<IAsyncBasicConsumer, ConcurrentDictionary<string, TaskCompletionSource<BasicDeliverEventArgs>>> AllResponses =
+			new ConcurrentDictionary<IAsyncBasicConsumer, ConcurrentDictionary<string, TaskCompletionSource<BasicDeliverEventArgs>>>();
 		
 		protected readonly IConsumerFactory ConsumerFactory;
 		protected readonly Pipe.Middleware.Middleware ResponsePipe;
@@ -49,7 +49,7 @@ namespace RawRabbit.Operations.Request.Middleware
 			var dedicatedConsumer = GetDedicatedConsumer(context);
 			var responseTsc = new TaskCompletionSource<BasicDeliverEventArgs>();
 
-			IBasicConsumer consumer;
+			IAsyncBasicConsumer consumer;
 			if (dedicatedConsumer)
 			{
 				consumer = await ConsumerFactory.CreateConsumerAsync(token: token);
@@ -81,7 +81,7 @@ namespace RawRabbit.Operations.Request.Middleware
 			if (dedicatedConsumer)
 			{
 				_logger.Info("Disposing dedicated consumer on queue {queueName}", respondCfg.Consume.QueueName);
-				consumer.Model.Dispose();
+				(consumer as AsyncDefaultBasicConsumer)?.Channel?.Dispose();
 				AllResponses.TryRemove(consumer, out _);
 			}
 			context.Properties.Add(PipeKey.DeliveryEventArgs, responseTsc.Task.Result);

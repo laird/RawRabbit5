@@ -13,11 +13,11 @@ namespace RawRabbit.Enrichers.Polly.Middleware
 		public PooledChannelMiddleware(IChannelPoolFactory poolFactory, PooledChannelOptions options = null)
 			: base(poolFactory, options) { }
 
-		protected override Task<IModel> GetChannelAsync(IPipeContext context, CancellationToken token)
+		protected override Task<IChannel> GetChannelAsync(IPipeContext context, CancellationToken token)
 		{
 			var policy = context.GetPolicy(PolicyKeys.ChannelCreate);
 			return policy.ExecuteAsync(
-				action: ct => base.GetChannelAsync(context, ct),
+				action: (ctx, ct) => base.GetChannelAsync(context, ct),
 				cancellationToken: token,
 				contextData: new Dictionary<string, object>
 				{

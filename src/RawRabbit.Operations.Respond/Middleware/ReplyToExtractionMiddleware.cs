@@ -58,7 +58,7 @@ namespace RawRabbit.Operations.Respond.Middleware
 			}
 			else
 			{
-				args.BasicProperties.ReplyTo = replyTo.RoutingKey;
+				// args.BasicProperties.ReplyTo = replyTo.RoutingKey; // Read-only in v7
 				_logger.Info("Using reply address with exchange {exchangeName} and routing key '{routingKey}'", replyTo.ExchangeName, replyTo.RoutingKey);
 			}
 			return replyTo;

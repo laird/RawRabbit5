@@ -1,4 +1,4 @@
-﻿using RawRabbit.Common;
+using RawRabbit.Common;
 
 namespace RawRabbit.Configuration.Exchange
 {

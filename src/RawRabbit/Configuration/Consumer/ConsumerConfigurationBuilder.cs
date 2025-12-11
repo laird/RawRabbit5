@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using RawRabbit.Configuration.Consume;
 using RawRabbit.Configuration.Exchange;
 using RawRabbit.Configuration.Queue;

@@ -78,7 +78,7 @@ namespace RawRabbit.Middleware
 			await TopologyProvider.BindQueueAsync(deadLetterQueueName, deadLeterExchangeName, deliveryArgs.RoutingKey);
 			using (var publishChannel = await ChannelFactory.CreateChannelAsync(token))
 			{
-				publishChannel.BasicPublish(deadLeterExchangeName, deliveryArgs.RoutingKey, false, deliveryArgs.BasicProperties, deliveryArgs.Body);
+				await publishChannel.BasicPublishAsync(deadLeterExchangeName, deliveryArgs.RoutingKey, false, (RabbitMQ.Client.BasicProperties)deliveryArgs.BasicProperties, deliveryArgs.Body);
 			}
 			await TopologyProvider.UnbindQueueAsync(deadLetterQueueName, deadLeterExchangeName, deliveryArgs.RoutingKey);
 

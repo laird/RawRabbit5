@@ -1,119 +1,89 @@
-_Looking for documentation of 1.x? [Click here](https://github.com/pardahlman/RawRabbit/tree/stable)_
-# RawRabbit
+# RawRabbit (.NET 9 port)
 
-[![Build Status](https://img.shields.io/appveyor/ci/pardahlman/rawrabbit.svg?style=flat-square)](https://ci.appveyor.com/project/pardahlman/rawrabbit) [![Documentation Status](https://readthedocs.org/projects/rawrabbit/badge/?version=latest&style=flat-square)](http://rawrabbit.readthedocs.org/) [![NuGet](https://img.shields.io/nuget/v/RawRabbit.svg?style=flat-square)](https://www.nuget.org/packages/RawRabbit) [![GitHub release](https://img.shields.io/github/release/pardahlman/rawrabbit.svg?style=flat-square)](https://github.com/pardahlman/rawrabbit/releases/latest)
-[![Slack Status](https://rawrabbit.herokuapp.com/badge.svg)](https://rawrabbit.herokuapp.com)
+This repository is a port of [pardahlman/RawRabbit](https://github.com/pardahlman/RawRabbit), a middleware-style .NET client for [RabbitMQ](https://www.rabbitmq.com/). The GitHub description calls this a .NET 9 migration.
 
-## Quick introduction
-`RawRabbit` is a modern .NET framework for communication over [RabbitMQ](http://rabbitmq.com/). The modular design and middleware oriented architecture makes the client highly customizable while providing sensible default for topology, routing and more. Documentation for version 2.x of the is currently found under [`/docs`](https://github.com/pardahlman/RawRabbit/tree/2.0/docs).
+**Important:** the default branch, `2.0`, still targets `netstandard1.5` and `net451` — the original 2.x stack. The .NET 9 work (`TargetFramework` `net9.0`, package version 3.0.0) is on the `2.1` branch. Clone that branch unless you specifically want the legacy 2.x sources.
 
-### Configure, enrich and extend
+Sibling repos [RawRabbit2](https://github.com/laird/RawRabbit2), [RawRabbit3](https://github.com/laird/RawRabbit3), and [RawRabbit4](https://github.com/laird/RawRabbit4) are earlier iterations of the same effort. Their default branches also still show the upstream 2.x README and targets. Prefer this repo's `2.1` branch as the current port.
 
-`RawRabbit` is configured with `RawRabbitOptions`, an options object that makes it possible to register client configuration, plugins as well as override internal services
+## What you need
 
-```csharp
-var client = RawRabbitFactory.CreateSingleton(new RawRabbitOptions
-{
-  ClientConfiguration = new ConfigurationBuilder()
-    .SetBasePath(Directory.GetCurrentDirectory())
-    .AddJsonFile("rawrabbit.json")
-    .Build()
-    .Get<RawRabbitConfiguration>(),
-  Plugins = p => p
-    .UseProtobuf()
-    .UsePolly(c => c
-        .UsePolicy(queueBindPolicy, PolicyKeys.QueueBind)
-        .UsePolicy(queueDeclarePolicy, PolicyKeys.QueueDeclare)
-        .UsePolicy(exchangeDeclarePolicy, PolicyKeys.ExchangeDeclare)
-    ),
-  DependencyInjection = ioc => ioc
-    .AddSingleton<IChannelFactory, CustomChannelFactory>()
-});
+- [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0) (for the `2.1` branch)
+- A running [RabbitMQ](https://www.rabbitmq.com/download.html) broker for the samples and tests
+
+## Install (from source)
+
+This port is not published as a NuGet package under this account. Official `RawRabbit` packages on nuget.org are still the upstream 2.x line. Build from source:
+
+```bash
+git clone -b 2.1 https://github.com/laird/RawRabbit5.git
+cd RawRabbit5
+dotnet build RawRabbit.sln
 ```
 
-### Publish/Subscribe
-Set up strongly typed publish/subscribe in just a few lines of code.
+To use it from another project, add a project reference to `src/RawRabbit/RawRabbit.csproj`, or pack and install locally:
+
+```bash
+dotnet pack src/RawRabbit/RawRabbit.csproj -c Release
+dotnet add YourApp package RawRabbit --source ./src/RawRabbit/bin/Release
+```
+
+## Get started
+
+Publish and subscribe with a strongly typed message (broker must be reachable with the usual RabbitMQ defaults, or with a `rawrabbit.json` configuration file):
 
 ```csharp
 var client = RawRabbitFactory.CreateSingleton();
 await client.SubscribeAsync<BasicMessage>(async msg =>
 {
-  Console.WriteLine($"Received: {msg.Prop}.");
+    Console.WriteLine($"Received: {msg.Prop}.");
 });
 
-await client.PublishAsync(new BasicMessage { Prop = "Hello, world!"});
+await client.PublishAsync(new BasicMessage { Prop = "Hello, world!" });
 ```
 
-### Request/Response
-`RawRabbits` request/response (`RPC`) implementation uses the [direct reply-to feature](https://www.rabbitmq.com/direct-reply-to.html) for better performance and lower resource allocation.
+Request/response uses RabbitMQ's [direct reply-to](https://www.rabbitmq.com/docs/direct-reply-to) feature:
 
 ```csharp
 var client = RawRabbitFactory.CreateSingleton();
-client.RespondAsync<BasicRequest, BasicResponse>(async request =>
+await client.RespondAsync<BasicRequest, BasicResponse>(async request =>
 {
-  return new BasicResponse();
+    return new BasicResponse();
 });
 
 var response = await client.RequestAsync<BasicRequest, BasicResponse>();
 ```
 
-### Ack, Nack, Reject and Retry
-
-Unlike many other clients, `basic.ack`, `basic.nack` and `basic.reject` are first class citizen in the message handler
+Acknowledgements are return values from the handler, not a side API. Delayed retries are supported too:
 
 ```csharp
-var client = RawRabbitFactory.CreateSingleton();
 await client.SubscribeAsync<BasicMessage>(async msg =>
 {
-  if(UnableToProcessMessage(msg))
-  {
-    return new Nack(requeue: true);
-  }
-  ProcessMessage(msg)
-  return new Ack();
+    if (UnableToProcessMessage(msg))
+    {
+        return new Nack(requeue: true);
+    }
+
+    try
+    {
+        ProcessMessage(msg);
+        return new Ack();
+    }
+    catch (Exception)
+    {
+        return Retry.In(TimeSpan.FromSeconds(30));
+    }
 });
 ```
 
-In addition to the basic acknowledgements, RawRabbit also suppoert delayed retries
+Samples are under `sample/`. Configuration, plugins, and per-call topology overrides are described in `docs/`. For 1.x documentation, see the [upstream stable branch](https://github.com/pardahlman/RawRabbit/tree/stable).
 
-```csharp
-var client = RawRabbitFactory.CreateSingleton();
-await client.SubscribeAsync<BasicMessage>(async msg =>
-{
-  try
-  {
-    ProcessMessage(msg)
-    return new Ack();
-  }
-  catch (Exception e)
-  {
-    return Retry.In(TimeSpan.FromSeconds(30));
-  }
-});
-```
+## License
 
-### Granular control for each call
+MIT (see `LICENSE`). This is a derivative of pardahlman's RawRabbit; keep that attribution.
 
-Add or change properties in the `IPipeContext` to tailor calls for specific type of messages. This makes it possible to modifly the topology features for calls, publish confirm timeout, consumer concurrency and much more
+## Notes for maintainers
 
-```csharp
-await subscriber.SubscribeAsync<BasicMessage>(received =>
-{
-  receivedTcs.TrySetResult(received);
-  return Task.FromResult(true);
-}, ctx => ctx
-  .UseSubscribeConfiguration(cfg => cfg
-    .Consume(c => c
-      .WithRoutingKey("custom_key")
-      .WithConsumerTag("custom_tag")
-      .WithPrefetchCount(2)
-      .WithNoLocal(false))
-    .FromDeclaredQueue(q => q
-      .WithName("custom_queue")
-      .WithAutoDelete()
-      .WithArgument(QueueArgument.DeadLetterExchange, "dlx"))
-    .OnDeclaredExchange(e=> e
-      .WithName("custom_exchange")
-      .WithType(ExchangeType.Topic))
-));
-```
+- Point the default branch at `2.1` (or merge it) so the GitHub description, README, and code agree.
+- Upstream badges (AppVeyor, nuget.org, the old Slack/Heroku badge at `rawrabbit.herokuapp.com`) describe pardahlman's project, not this fork. Remove or replace them.
+- The older wording "Documentation for version 2.x of the is currently found" and the typos "suppoert" and "modifly" should not be copied forward.
